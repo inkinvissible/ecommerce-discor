@@ -1,0 +1,14 @@
+# Ignora las dependencias locales, Docker las instalará dentro del contenedor
+node_modules
+
+# Ignora la carpeta de compilación local
+dist
+
+# Ignora los archivos de log de npm
+npm-debug.log
+
+# Ignora el archivo .env, los secretos se inyectan en tiempo de ejecución
+.env
+
+# Ignora la carpeta de Git
+.git

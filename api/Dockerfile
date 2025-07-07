@@ -27,25 +27,26 @@ RUN npx tsc
 
 # --- Etapa 2: Producción ---
 # Ahora creamos la imagen final, que será mucho más ligera.
-FROM node:22.17-bookworm-slim AS production
-
+FROM node:22-bookworm-slim AS production
 WORKDIR /app
 
-# Copia los archivos de definición de paquetes
-COPY package*.json ./
+RUN apt-get update && apt-get install -y openssl
 
-# Instala SOLO las dependencias de producción
+# Copia solo los package.json para instalar dependencias de producción
+COPY --from=builder /app/package*.json ./
 RUN npm install --only=production
+
+# Copia la carpeta prisma con el schema
+COPY --from=builder /app/prisma ./prisma
+
+# Genera el cliente de Prisma DENTRO de la imagen final
+# Esto asegura que todo lo necesario para Prisma esté aquí
+RUN npx prisma generate
 
 # Copia el código JavaScript compilado desde la etapa 'builder'
 COPY --from=builder /app/dist ./dist
-
-# Copia el cliente de Prisma generado desde la etapa 'builder'
-# Esto es crucial para que funcione en el entorno de producción
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
 # Expone el puerto que usa tu API
 EXPOSE 4000
 
 # El comando para iniciar la aplicación ahora apunta al archivo JS compilado
-CMD [ "node", "dist/app.js" ]
+CMD [ "node", "dist/index.js" ]
