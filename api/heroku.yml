@@ -2,7 +2,7 @@
 build:
   docker:
     # Apunta a la carpeta que contiene tu Dockerfile de producción.
-    web: api/Dockerfile
+    web: Dockerfile
   # (Opcional) Configuración de variables de entorno para el tiempo de construcción.
   # config:
   #   RAILS_ENV: "production"
