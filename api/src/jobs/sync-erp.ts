@@ -1,11 +1,11 @@
 // api/src/jobs/sync-erp.ts
 import 'dotenv/config'; // ¡Importante! Carga las variables de .env
-import { prisma } from '../lib/prisma';
-import { logJobExecution, jobLogger, logError, serverLogger } from '../lib/logger';
+import {prisma} from '../lib/prisma';
+import {logJobExecution, jobLogger, logError, serverLogger} from '../lib/logger';
 
 // Importa tus módulos de sincronización
-// import { syncClients } from './sync/syncClients';
-import { syncProducts } from './sync/syncProducts';
+import {syncClients} from './sync/syncClients';
+// import { syncProducts } from './sync/syncProducts';
 
 // Función para ejecutar un job individual con logging
 async function executeJob(jobName: string, jobFunction: () => Promise<void>) {
@@ -16,12 +16,12 @@ async function executeJob(jobName: string, jobFunction: () => Promise<void>) {
         await jobFunction();
         const duration = Date.now() - startTime;
         logJobExecution(jobName, 'success', duration);
-        return { success: true, duration };
+        return {success: true, duration};
     } catch (error) {
         const duration = Date.now() - startTime;
         logJobExecution(jobName, 'error', duration, error as Error);
-        logError(error as Error, { context: `Job execution: ${jobName}` });
-        return { success: false, duration, error };
+        logError(error as Error, {context: `Job execution: ${jobName}`});
+        return {success: false, duration, error};
     }
 }
 
@@ -43,13 +43,12 @@ async function main() {
     try {
         // Lista de jobs a ejecutar en secuencia
         const jobs = [
-            // { name: 'syncClients', fn: syncClients },
-            { name: 'syncProducts', fn: syncProducts },
+            { name: 'syncClients', fn: syncClients },
+            // {name: 'syncProducts', fn: syncProducts},
             // { name: 'syncPrices', fn: syncPrices },
-            // ...etc.
         ];
 
-        jobLogger.info({ totalJobs: jobs.length }, 'Jobs programados para ejecución');
+        jobLogger.info({totalJobs: jobs.length}, 'Jobs programados para ejecución');
 
         // Ejecuta los trabajos en secuencia
         for (let i = 0; i < jobs.length; i++) {
@@ -133,12 +132,12 @@ async function main() {
             await prisma.$disconnect();
             serverLogger.info('Database connection closed successfully');
         } catch (disconnectError) {
-            logError(disconnectError as Error, { context: 'Database disconnect' });
+            logError(disconnectError as Error, {context: 'Database disconnect'});
         }
 
         const totalDuration = (Date.now() - overallStartTime) / 1000;
         jobLogger.info('==========================================');
-        jobLogger.info({ duration: `${totalDuration.toFixed(2)}s` }, `=== FIN DEL PROCESO. Duración: ${totalDuration.toFixed(2)}s ===`);
+        jobLogger.info({duration: `${totalDuration.toFixed(2)}s`}, `=== FIN DEL PROCESO. Duración: ${totalDuration.toFixed(2)}s ===`);
         jobLogger.info('==========================================');
 
         // Exit code basado en si hubo errores
@@ -159,15 +158,15 @@ process.on('SIGTERM', () => {
 });
 
 process.on('uncaughtException', (error) => {
-    logError(error, { context: 'Uncaught Exception' });
-    serverLogger.fatal({ error: error.message, stack: error.stack }, 'Uncaught Exception - Process will exit');
+    logError(error, {context: 'Uncaught Exception'});
+    serverLogger.fatal({error: error.message, stack: error.stack}, 'Uncaught Exception - Process will exit');
     process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     const error = reason instanceof Error ? reason : new Error(String(reason));
-    logError(error, { context: 'Unhandled Promise Rejection', promise: promise.toString() });
-    serverLogger.fatal({ reason, promise: promise.toString() }, 'Unhandled Promise Rejection');
+    logError(error, {context: 'Unhandled Promise Rejection', promise: promise.toString()});
+    serverLogger.fatal({reason, promise: promise.toString()}, 'Unhandled Promise Rejection');
     process.exit(1);
 });
 

@@ -1,29 +1,17 @@
-// api/src/jobs/sync/syncClients.ts
+// api/src/jobs/sync/syncClients.ts (Versión final - Prioriza Usabilidad)
 
-import { fetchErpClients } from '../../lib/erp-client'; // Asumimos que esta función existe
-import { erpClientsApiResponseSchema, type ErpClient } from '../../schemas/erp.schemas';
+import { fetchErpClients } from '../../lib/erp-client';
+import { erpClientsApiResponseSchema } from '../../schemas/erp.schemas';
 import { prisma } from '../../lib/prisma';
 import { logJobExecution, jobLogger, logError, dbLogger } from '../../lib/logger';
 import type { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-// Definimos el tipo exacto para el cliente de transacción
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
-/**
- * Busca el ID de una ShippingZone por su nombre.
- * @param zoneName - Nombre de la zona a buscar (ej: "Capital Federal").
- * @param tx - Cliente de transacción de Prisma.
- * @returns El ID de la zona si se encuentra, de lo contrario null.
- */
 async function findShippingZoneIdByName(zoneName: string | undefined, tx: TransactionClient): Promise<string | null> {
-    if (!zoneName || zoneName.trim() === '') {
-        return null;
-    }
-    const zone = await tx.shippingZone.findUnique({
-        where: { name: zoneName },
-        select: { id: true }
-    });
+    if (!zoneName || zoneName.trim() === '') return null;
+    const zone = await tx.shippingZone.findUnique({ where: { name: zoneName }, select: { id: true } });
     return zone?.id ?? null;
 }
 
@@ -33,48 +21,33 @@ export async function syncClients() {
     const BCRYPT_SALT_ROUNDS = 10;
 
     logJobExecution(jobName, 'start');
-    jobLogger.info('INICIANDO Sincronización de Clientes...');
+    jobLogger.info('INICIANDO Sincronización de Clientes (Modo Usabilidad Prioritaria)...');
 
-    let succeededCount = 0, failedCount = 0, usersCreatedCount = 0, clientsDeactivated = 0;
+    let succeededCount = 0, failedCount = 0, usersCreatedCount = 0, usersUpdatedCount = 0, clientsDeactivated = 0;
 
     try {
-        // 1. Obtener datos
-        jobLogger.info('Obteniendo clientes del ERP...');
         const rawDataObject = await fetchErpClients();
-
-        // 2. Validar con Zod
-        jobLogger.info('Validando datos con schema Zod...');
         const validationResult = erpClientsApiResponseSchema.safeParse(rawDataObject);
 
         if (!validationResult.success) {
             const error = new Error('Fallo de validación Zod en clientes.');
-            logError(error, {
-                context: 'syncClients - Zod validation',
-                zodErrors: validationResult.error.flatten()
-            });
+            logError(error, { context: 'syncClients - Zod validation', zodErrors: validationResult.error.flatten() });
             throw error;
         }
 
         const erpClients = validationResult.data.response.clientes;
         jobLogger.info({ totalClients: erpClients.length }, 'Clientes validados exitosamente. Iniciando procesamiento...');
 
-        // 3. Iterar y guardar en la Base de Datos
-        for (let index = 0; index < erpClients.length; index++) {
-            const erpClient = erpClients[index];
-
+        for (const erpClient of erpClients) {
             try {
                 await prisma.$transaction(async (tx: TransactionClient) => {
-                    const clientStart = Date.now();
-
-                    // A. Buscar ID de la zona de envío
+                    // 1. Crear/Actualizar Cliente (sin cambios aquí)
                     const shippingZoneId = await findShippingZoneIdByName(erpClient.C2_ZONA, tx);
-
-                    // B. Crear/Actualizar Cliente
                     const client = await tx.client.upsert({
                         where: { erpCode: erpClient.C2_CODI },
                         update: {
                             businessName: erpClient.C2_DESC,
-                            cuit: erpClient.C2_CUIT || '', // Si es undefined, ponemos string vacío
+                            cuit: erpClient.C2_CUIT || '',
                             priceListId: erpClient.C2_TIPP,
                             shippingZoneId: shippingZoneId,
                             deletedAt: erpClient.INACTIVO ? new Date() : null,
@@ -91,84 +64,51 @@ export async function syncClients() {
 
                     if (erpClient.INACTIVO) clientsDeactivated++;
 
-                    // C. Crear/Actualizar Usuario por defecto
+                    // 2. Lógica de Usuario/Contraseña Simplificada
+                    const username = client.erpCode;
                     const cuit = erpClient.C2_CUIT;
-                    if (cuit && cuit.length === 11) {
-                        const username = cuit.slice(-5);
-                        const password = cuit.slice(-5);
-                        const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+                    const password = (cuit && cuit.length >= 4) ? cuit.slice(-4) : '0000';
+                    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-                        const existingUser = await tx.user.findUnique({ where: { username } });
-
-                        if (!existingUser) {
-                            await tx.user.create({
-                                data: {
-                                    clientId: client.id,
-                                    username: username,
-                                    passwordHash: passwordHash,
-                                    email: erpClient.C2_EMAI || `${username}@placeholder.com`, // Email de fallback
-                                }
-                            });
-                            usersCreatedCount++;
-                        } else {
-                            // Opcional: podrías decidir actualizar la contraseña si cambia la lógica
-                            // o asociarlo si el usuario existe pero no tiene cliente.
-                            // Por ahora, si existe, no hacemos nada para evitar problemas.
-                        }
-                    }
-
-                    // D. Crear/Actualizar Dirección por defecto
-                    // Buscamos si ya tiene una dirección por defecto para actualizarla
-                    const defaultAddress = await tx.address.findFirst({
-                        where: { clientId: client.id, isDefaultShipping: true }
+                    // 3. Crear O Actualizar Usuario
+                    const existingUser = await tx.user.findUnique({
+                        where: { username: username }
                     });
 
-                    const addressData = {
-                        clientId: client.id,
-                        alias: 'Principal (ERP)',
-                        street: erpClient.C2_DIRE || 'Sin especificar',
-                        city: erpClient.C2_LOCA || 'Sin especificar',
-                        zipCode: erpClient.C2_CODP || 'S/D',
-                        isDefaultShipping: true,
-                    };
+                    if (existingUser) {
+                        // El usuario ya existe, comparar si la contraseña necesita actualizarse
+                        const isPasswordMatch = await bcrypt.compare(password, existingUser.passwordHash);
 
-                    if (defaultAddress) {
-                        await tx.address.update({
-                            where: { id: defaultAddress.id },
-                            data: addressData
-                        });
+                        if (!isPasswordMatch) {
+                            // La contraseña generada es diferente a la almacenada, ¡actualizar!
+                            await tx.user.update({
+                                where: { id: existingUser.id },
+                                data: { passwordHash: passwordHash }
+                            });
+                            usersUpdatedCount++;
+                            dbLogger.info({ username }, "Contraseña del usuario actualizada para coincidir con el CUIT del ERP.");
+                        }
                     } else {
-                        await tx.address.create({ data: addressData });
+                        // El usuario no existe, crearlo.
+                        await tx.user.create({
+                            data: {
+                                clientId: client.id,
+                                username: username,
+                                passwordHash: passwordHash,
+                                email: erpClient.C2_EMAI || `${username}@placeholder.com`,
+                                // No hay campo 'mustChangePassword'
+                            }
+                        });
+                        usersCreatedCount++;
+                        dbLogger.info({ username }, "Nuevo usuario creado.");
                     }
-
-                    const clientDuration = Date.now() - clientStart;
-                    dbLogger.debug({
-                        erpCode: client.erpCode,
-                        businessName: client.businessName,
-                        duration: `${clientDuration}ms`
-                    }, 'Client processed successfully');
                 });
-
                 succeededCount++;
-
-                // Log de progreso cada 50 clientes
-                if ((index + 1) % 50 === 0) {
-                    jobLogger.info({
-                        processed: index + 1,
-                        total: erpClients.length,
-                        succeeded: succeededCount,
-                        failed: failedCount,
-                        progress: `${((index + 1) / erpClients.length * 100).toFixed(1)}%`
-                    }, 'Processing progress');
-                }
-
             } catch (error) {
                 failedCount++;
                 logError(error as Error, {
                     context: 'syncClients - Client processing',
                     erpCode: erpClient.C2_CODI,
-                    businessName: erpClient.C2_DESC,
-                    clientIndex: index
                 });
             }
         }
@@ -179,6 +119,7 @@ export async function syncClients() {
             succeededCount,
             failedCount,
             usersCreatedCount,
+            usersUpdatedCount, // Nuevo dato para el log
             clientsDeactivated,
             successRate: erpClients.length > 0 ? `${((succeededCount / erpClients.length) * 100).toFixed(2)}%` : '100%',
         };
@@ -199,11 +140,14 @@ export async function syncClients() {
     }
 }
 
-// Función para ejecutar el sync manualmente o desde el scheduler
 export const runClientSync = async () => {
     try {
         await syncClients();
     } catch (error) {
-        logError(error as Error, { context: 'Client sync job execution' });
+        // El error ya fue logueado dentro de syncClients y el orquestador,
+        // pero podemos añadir un log final aquí si se ejecuta de forma aislada.
+        logError(error as Error, { context: 'Client sync job execution wrapper' });
+        // Es importante no ocultar el error para que el llamador sepa que falló.
+        throw error;
     }
 };

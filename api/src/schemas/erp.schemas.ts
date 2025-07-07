@@ -2,34 +2,40 @@
 import { z } from 'zod';
 
 const erpClientSchema = z.object({
-    // --- Campos Indispensables ---
+    // --- Campos Indispensables (los mantenemos requeridos) ---
     C2_CODI: z.string().min(1, 'El código de cliente no puede estar vacío'),
     C2_DESC: z.string().min(1, 'La razón social no puede estar vacía'),
 
-    // CORREGIDO: Permite un CUIT válido de 11 dígitos O un string vacío.
-    // .optional() lo hace tolerante a que la etiqueta <C2_CUIT> ni siquiera exista.
-    C2_CUIT: z.string()
-        .regex(/^\d{11}$/, 'CUIT inválido. Debe tener 11 dígitos.')
-        .or(z.literal('')) // Permite un string vacío
-        .optional(),      // Permite que el campo no exista
+    // --- CUIT (AHORA MÁS ROBUSTO) ---
+    C2_CUIT: z.string().optional().transform((cuit) => {
+        if (!cuit) return ''; // Si es null, undefined o '', devuelve ''
+        const cleanedCuit = cuit.replace(/[^0-9]/g, ''); // Elimina todo lo que no sea número
+        return cleanedCuit.length === 11 ? cleanedCuit : ''; // Solo devuelve el CUIT si tiene 11 dígitos
+    }),
 
-    // Si el campo correcto es C2_TIPP, simplemente renómbralo.
+    // --- Lista de Precios ---
     C2_TIPP: z.coerce.number().int().nonnegative('La lista de precios no puede ser negativa'),
 
-    // --- Campos de Contacto y Dirección (ya estaban bien con .optional()) ---
-    C2_EMAI: z.string().email('Email principal inválido').or(z.literal('')).optional(),
+    // --- Email (AHORA MÁS ROBUSTO) ---
+    C2_EMAI: z.string().optional().transform((email) => {
+        if (!email) return '';
+        // Una validación simple: si contiene un '@' y no tiene espacios, es suficientemente bueno.
+        // z.string().email() es demasiado estricto para datos sucios.
+        return email.includes('@') && !email.includes(' ') ? email : '';
+    }),
+
+    // --- Campos de Dirección y Contacto (ya estaban bien con .optional()) ---
     C2_DIRE: z.string().optional(),
     C2_LOCA: z.string().optional(),
     C2_PROV: z.string().optional(),
     C2_CODP: z.string().optional(),
     C2_TELE: z.string().optional(),
 
-    // --- Campos de Estado (más robusto) ---
-    // MEJORADO: Si el campo INACTIVO no viene, por defecto es 'N' (no inactivo).
-    INACTIVO: z.enum(['S', 'N'])
+    // --- Estado INACTIVO (AHORA MÁS ROBUSTO) ---
+    INACTIVO: z.enum(['S', 'N', '']) // 1. Permitimos el string vacío
         .optional()
-        .default('N') // Si el campo es undefined, se asume 'N'
-        .transform(value => value === 'S'),
+        .default('N') // 2. Si el campo no viene, es 'N'
+        .transform(value => value === 'S'), // 3. Transformamos 'S' a true, y 'N' o '' a false
 
     // --- Campos de Reglas de Negocio ---
     C2_ZONA: z.string().optional(),
@@ -40,10 +46,10 @@ const erpClientSchema = z.object({
 export const erpClientsApiResponseSchema = z.object({
     response: z.object({
         clientes: z.array(erpClientSchema),
-        error: z.string(),
+        // Podríamos hacer el campo error opcional si a veces no viene
+        error: z.string().optional(),
     })
 });
-
 export type ErpClient = z.infer<typeof erpClientSchema>;
 
 

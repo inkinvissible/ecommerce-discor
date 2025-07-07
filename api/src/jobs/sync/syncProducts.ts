@@ -59,6 +59,7 @@ export async function syncProducts() {
         const rawDataObject = await fetchErpProducts();
 
         console.log('ESTRUCTURA REAL DE LA API:', JSON.stringify(rawDataObject, null, 2));
+        jobLogger.info('Estructura de datos obtenida del ERP:', JSON.stringify(rawDataObject, null, 2));
 
         // 2. Validar con Zod (¡directamente!)
         jobLogger.info('Validando datos con schema Zod...');

@@ -84,14 +84,14 @@ export const fetchErpClients = async () => {
         const duration = Date.now() - startTime;
 
         erpLogger.info({
-            productsCount: response.data?.length || 0,
+            clientsCount: response.data?.response?.clientes?.length || 0, // Contar clientes
             duration: `${duration}ms`
         }, 'Clients fetched successfully from ERP');
 
         // Log de muestra (solo los primeros productos para debug)
-        if (response.data?.length > 0) {
+        if (response.data?.response?.clientes?.length > 0) {
             erpLogger.debug({
-                sampleProducts: response.data.slice(0, 2)
+                sampleClients: response.data.response.clientes.slice(0, 2) // Log de clientes
             }, 'Sample clients from ERP');
         }
 
