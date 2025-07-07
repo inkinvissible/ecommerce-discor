@@ -4,7 +4,8 @@
     "build": "npx tsc",
     "start": "node dist/index.js",
     "prisma:migrate": "npx prisma migrate dev",
-    "prisma:generate": "npx prisma generate"
+    "prisma:generate": "npx prisma generate",
+    "sync:erp": "ts-node src/jobs/sync-erp.ts"
   },
   "dependencies": {
     "axios": "^1.10.0",

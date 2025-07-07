@@ -92,7 +92,7 @@ model Product {
   erpCode         String?   @unique
   sku             String?   @unique
   name            Json
-  description     Json
+  description     Json?
   productBrandId  String
   categoryId      String
   attributes      Json      @default("{}")
