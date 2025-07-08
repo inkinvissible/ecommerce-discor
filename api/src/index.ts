@@ -1,5 +1,6 @@
 import express from 'express';
 import { serverLogger, logRequest } from './lib/logger';
+import authRoutes from "./routes/auth.routes";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -23,3 +24,5 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     serverLogger.info({ port }, `Servidor escuchando en http://localhost:${port}`);
 });
+
+app.use('/api/auth', authRoutes);

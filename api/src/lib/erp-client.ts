@@ -104,3 +104,24 @@ export const fetchErpClients = async () => {
         throw error;
     }
 }
+
+export const fetchErpStock = async () => {
+    try {
+        const startTime = Date.now();
+        const response = await erpClient.get('/Stock');
+        const duration = Date.now() - startTime;
+
+        erpLogger.info({
+            stockItemsCount: response.data?.Stock_response?.articulos?.length || 0,
+            duration: `${duration}ms`
+        }, 'Stock data fetched successfully from ERP');
+
+        return response.data;
+    } catch (error) {
+        logError(error as Error, {
+            context: 'fetchErpStock',
+            endpoint: '/Stock' // Ajusta si el endpoint es diferente
+        });
+        throw error;
+    }
+};
