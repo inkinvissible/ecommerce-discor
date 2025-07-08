@@ -38,7 +38,7 @@ model User {
   clientId     String
   username     String    @unique
   passwordHash String
-  email        String    
+  email        String
   deletedAt    DateTime? // Soft Delete
 
   client        Client                          @relation(fields: [clientId], references: [id])

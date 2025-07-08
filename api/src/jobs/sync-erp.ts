@@ -4,8 +4,8 @@ import {prisma} from '../lib/prisma';
 import {logJobExecution, jobLogger, logError, serverLogger} from '../lib/logger';
 
 // Importa tus módulos de sincronización
-import {syncClients} from './sync/syncClients';
-// import { syncProducts } from './sync/syncProducts';
+// import {syncClients} from './sync/syncClients';
+import { syncProducts } from './sync/syncProducts';
 
 // Función para ejecutar un job individual con logging
 async function executeJob(jobName: string, jobFunction: () => Promise<void>) {
@@ -43,8 +43,8 @@ async function main() {
     try {
         // Lista de jobs a ejecutar en secuencia
         const jobs = [
-            { name: 'syncClients', fn: syncClients },
-            // {name: 'syncProducts', fn: syncProducts},
+            //{ name: 'syncClients', fn: syncClients },
+            {name: 'syncProducts', fn: syncProducts},
             // { name: 'syncPrices', fn: syncPrices },
         ];
 

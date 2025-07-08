@@ -51,10 +51,22 @@ export async function syncProducts() {
     jobLogger.info('INICIANDO Sincronización de Productos...');
 
     let succeededCount = 0, failedCount = 0, brandCreatedCount = 0, categoryCreatedCount = 0;
-    const WAREHOUSE_ID = 'default-warehouse'; // Asegúrate que exista en tu BD
-
+    const WAREHOUSE_ID = 'default-warehouse';
+    const WAREHOUSE_NAME = 'Almacén Principal - Barcalá 665';
     try {
-        // 1. Obtener datos (¡ya son un objeto JS/JSON!)
+        // Aseguramos que el almacén exista
+        jobLogger.info({ warehouseId: WAREHOUSE_ID, warehouseName: WAREHOUSE_NAME }, 'Verificando y asegurando la existencia del almacén por defecto...');
+        await prisma.warehouse.upsert({
+            where: { id: WAREHOUSE_ID },
+            update: { name: WAREHOUSE_NAME }, // Actualiza el nombre por si cambia
+            create: {
+                id: WAREHOUSE_ID,
+                name: WAREHOUSE_NAME,
+            },
+        });
+        jobLogger.info('Almacén por defecto asegurado en la base de datos.');
+
+        // 1. Obtener datos
         jobLogger.info('Obteniendo productos del ERP...');
         const rawDataObject = await fetchErpProducts();
 
@@ -121,6 +133,7 @@ export async function syncProducts() {
                         where: {erpCode: erpProduct.c1_codi},
                         update: {
                             name: {es: erpProduct.c1_desc},
+                            sku: erpProduct.c1_codi,
                             productBrandId: brandId,
                             description: { es: generatedDescription },
                             categoryId: categoryId,
@@ -128,6 +141,7 @@ export async function syncProducts() {
                         },
                         create: {
                             erpCode: erpProduct.c1_codi,
+                            sku: erpProduct.c1_codi,
                             name: {es: erpProduct.c1_desc},
                             description: { es: generatedDescription },
                             productBrandId: brandId,

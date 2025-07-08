@@ -74,8 +74,7 @@ const extractFilename = z.string().transform(path => {
 export const erpProductSchema = z.object({
     // --- Identificadores Core ---
     c1_codi: z.string().min(1, 'El código de artículo no puede estar vacío'), // -> Product.erpCode
-    c1_desc: z.string().min(1, 'La descripción no puede estar vacía'), // -> Product.name
-
+    c1_desc: z.string().optional(),
     // --- Relaciones (extraemos los NOMBRES, el script se encargará de los IDs) ---
     descmarc: z.string().optional(), // -> ProductBrand.name
     c1_desg: z.string().optional(), // -> Category.name
@@ -96,7 +95,18 @@ export const erpProductSchema = z.object({
     // --- Datos Adicionales ---
     c1_foto: extractFilename, // Extraemos solo el nombre del archivo de la ruta
 
-}).strip();
+})
+    .strip()
+    .transform((data) =>{
+        const finalDesc = (data.c1_desc && data.c1_desc.trim() !== '')
+            ? data.c1_desc.trim()
+            : data.c1_codi; // Fallback al código si la descripción está vacía
+
+        return {
+            ...data, // Mantenemos todos los demás campos
+            c1_desc: finalDesc, // Sobreescribimos c1_desc con el valor final y limpio
+        };
+    })
 
 
 // --- Esquema para la RESPUESTA COMPLETA de la API de Artículos ---

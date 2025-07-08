@@ -6,7 +6,7 @@ const erpClient = axios.create({
     headers: {
         'Accept': 'application/json',
     },
-    timeout: 60000,
+    timeout: 120000,
     params:{
         token: process.env.API_TOKEN
     }
