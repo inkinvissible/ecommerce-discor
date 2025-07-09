@@ -15,6 +15,7 @@ const erpClientSchema = z.object({
 
     // --- Lista de Precios ---
     C2_TIPP: z.coerce.number().int().nonnegative('La lista de precios no puede ser negativa'),
+    C2_DTOE: z.coerce.number().int().nonnegative('El descuento no puede ser negativo').optional(),
 
     // --- Email (AHORA MÁS ROBUSTO) ---
     C2_EMAI: z.string().optional().transform((email) => {
@@ -119,3 +120,33 @@ export const erpProductsApiResponseSchema = z.object({
 
 // Extraemos el tipo inferido para tener autocompletado en el script de sync.
 export type ErpProduct = z.infer<typeof erpProductSchema>;
+
+const messyStringToInteger = z.string().transform((val) => {
+    if (!val) return 0;
+    // Maneja puntos como separadores de miles y comas como decimales, luego redondea.
+    const cleanVal = val.replace(/\./g, '').replace(',', '.');
+    return Math.round(parseFloat(cleanVal)) || 0;
+});
+
+export const erpStockItemSchema = z.object({
+    // Asumimos que el JSON usará los mismos nombres que el XML, pero en minúsculas/camelCase.
+    // Ajusta si los nombres de las claves en el JSON son diferentes.
+    CODIGOARTICULO: z.string().min(1, 'El código de artículo no puede estar vacío'),
+    STOCK: messyStringToInteger,
+    DEPOSITO: z.string().optional(), // Lo capturamos por si es útil en el futuro, pero no lo usaremos
+}).strip();
+
+
+// --- Esquema para la RESPUESTA COMPLETA de la API de Stock ---
+export const erpStockApiResponseSchema = z.object({
+    // La respuesta del ERP podría tener una estructura anidada como las otras.
+    // Ajusta esto a la estructura real del JSON que recibes.
+    // Asumo una estructura similar a la de productos.
+    Stock_response: z.object({
+        articulos: z.array(erpStockItemSchema),
+        error: z.string().optional(),
+    }),
+});
+
+// Extraemos el tipo inferido para tener autocompletado.
+export type ErpStockItem = z.infer<typeof erpStockItemSchema>;

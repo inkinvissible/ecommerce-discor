@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { loginUser, loginSchema } from '../services/auth.service';
 
 export async function loginHandler(req: Request, res: Response): Promise<void> {
+    console.log("Cuerpo de la solicitud en loginHandler:", req.body);
     try {
         const validatedBody = loginSchema.parse(req.body);
         const token = await loginUser(validatedBody);

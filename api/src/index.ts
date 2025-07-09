@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth.routes";
 
 const app = express();
 const port = process.env.PORT || 4000;
+app.use(express.json());
 
 // Middleware para logging de requests
 app.use((req, res, next) => {

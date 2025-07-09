@@ -48,6 +48,7 @@ export async function syncClients() {
                         update: {
                             businessName: erpClient.C2_DESC,
                             cuit: erpClient.C2_CUIT || '',
+                            discountPercentage: erpClient.C2_DTOE || 0,
                             priceListId: erpClient.C2_TIPP,
                             shippingZoneId: shippingZoneId,
                             deletedAt: erpClient.INACTIVO ? new Date() : null,
@@ -56,6 +57,7 @@ export async function syncClients() {
                             erpCode: erpClient.C2_CODI,
                             businessName: erpClient.C2_DESC,
                             cuit: erpClient.C2_CUIT || '',
+                            discountPercentage: erpClient.C2_DTOE || 0,
                             priceListId: erpClient.C2_TIPP,
                             shippingZoneId: shippingZoneId,
                             deletedAt: erpClient.INACTIVO ? new Date() : null,
@@ -69,6 +71,8 @@ export async function syncClients() {
                     const cuit = erpClient.C2_CUIT;
                     const password = (cuit && cuit.length >= 4) ? cuit.slice(-4) : '0000';
                     const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
+
 
                     // 3. Crear O Actualizar Usuario
                     const existingUser = await tx.user.findUnique({

@@ -20,6 +20,9 @@ model Client {
   priceListId   Int
   deletedAt     DateTime? // Soft Delete
 
+  discountPercentage Decimal @default(0) @db.Decimal(5, 2)
+  applyVat           Boolean  @default(true) // Si aplica IVA por defecto
+  pricingConfigs     ClientPricingConfig?
   // La zona de envío es opcional (nullable), ya que no todos los clientes pueden tener una.
   shippingZoneId String?
   shippingZone  ShippingZone? @relation(fields: [shippingZoneId], references: [id])
@@ -315,6 +318,17 @@ model OrderAppliedPromotion {
   @@id([orderId, promotionId])
 }
 
+model ClientPricingConfig {
+  id               String   @id @default(uuid())
+
+  clientId         String   @unique
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  markupPercentage Decimal  @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 // --- B2B DOCUMENTS & SYSTEM ---
 
@@ -379,4 +393,9 @@ model SyncLog {
   status  String
 
   createdAt DateTime @default(now())
+}
+
+model Configuration {
+  key   String @id
+  value String
 }

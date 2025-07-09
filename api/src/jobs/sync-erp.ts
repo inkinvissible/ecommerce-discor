@@ -6,6 +6,7 @@ import {logJobExecution, jobLogger, logError, serverLogger} from '../lib/logger'
 // Importa tus módulos de sincronización
 // import {syncClients} from './sync/syncClients';
 import { syncProducts } from './sync/syncProducts';
+import { syncStock } from './sync/syncStock';
 
 // Función para ejecutar un job individual con logging
 async function executeJob(jobName: string, jobFunction: () => Promise<void>) {
@@ -45,6 +46,7 @@ async function main() {
         const jobs = [
             //{ name: 'syncClients', fn: syncClients },
             {name: 'syncProducts', fn: syncProducts},
+            {name: 'syncStock', fn: syncStock},
             // { name: 'syncPrices', fn: syncPrices },
         ];
 
