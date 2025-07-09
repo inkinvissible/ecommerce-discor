@@ -1,6 +1,7 @@
 import express from 'express';
 import { serverLogger, logRequest } from './lib/logger';
 import authRoutes from "./routes/auth.routes";
+import productsRoutes from "./routes/products.routes";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -27,3 +28,4 @@ app.listen(port, () => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productsRoutes);

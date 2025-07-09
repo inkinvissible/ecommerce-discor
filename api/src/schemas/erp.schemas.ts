@@ -15,7 +15,27 @@ const erpClientSchema = z.object({
 
     // --- Lista de Precios ---
     C2_TIPP: z.coerce.number().int().nonnegative('La lista de precios no puede ser negativa'),
-    C2_DTOE: z.coerce.number().int().nonnegative('El descuento no puede ser negativo').optional(),
+
+    // --- Descuento (AHORA PROCESA PORCENTAJES) ---
+    C2_DTOE: z.string().optional().transform((discount) => {
+        if (!discount) return 0; // Si es null, undefined o '', devuelve 0
+
+        // Limpiar el string: eliminar espacios, comas, y el símbolo %
+        const cleanedDiscount = discount.replace(/[^\d.,]/g, '');
+
+        // Reemplazar coma por punto para decimales
+        const normalizedDiscount = cleanedDiscount.replace(',', '.');
+
+        // Convertir a número
+        const numericValue = parseFloat(normalizedDiscount);
+
+        // Verificar que sea un número válido
+        if (isNaN(numericValue)) return 0;
+
+        // Si el valor original contenía %, asumir que ya está en formato porcentual
+        // Si es mayor a 100, probablemente está mal formateado, así que limitarlo
+        return Math.min(Math.max(numericValue, 0), 100); // Entre 0 y 100
+    }),
 
     // --- Email (AHORA MÁS ROBUSTO) ---
     C2_EMAI: z.string().optional().transform((email) => {
@@ -150,3 +170,4 @@ export const erpStockApiResponseSchema = z.object({
 
 // Extraemos el tipo inferido para tener autocompletado.
 export type ErpStockItem = z.infer<typeof erpStockItemSchema>;
+

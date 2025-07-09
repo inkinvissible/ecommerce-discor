@@ -1,46 +1,227 @@
 // api/src/jobs/sync/syncProducts.ts
 
-import {fetchErpProducts} from '../../lib/erp-client';
-import {erpProductsApiResponseSchema} from '../../schemas/erp.schemas'; // Tu schema Zod
-import {prisma} from '../../lib/prisma';
-import {logJobExecution, jobLogger, logError, dbLogger} from '../../lib/logger';
-import type {Prisma, PrismaClient} from '@prisma/client';
+import { fetchErpProducts } from '../../lib/erp-client';
+import { erpProductsApiResponseSchema } from '../../schemas/erp.schemas';
+import { prisma } from '../../lib/prisma';
+import { logJobExecution, jobLogger, logError, dbLogger } from '../../lib/logger';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
-// Definimos el tipo exacto para el cliente de transacción
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 /**
- * Encuentra o crea una marca de producto o categoría.
- * @param modelName - Nombre del modelo ('productBrand' o 'category').
- * @param name - Nombre a buscar o crear.
- * @param tx - Cliente de transacción de Prisma.
- * @returns ID del modelo encontrado o creado.
+ * Cache para marcas y categorías para evitar consultas repetidas
  */
-async function findOrCreate(
+interface EntityCache {
+    brands: Map<string, string>;
+    categories: Map<string, string>;
+}
+
+/**
+ * Encuentra o crea una marca de producto o categoría con cache
+ */
+async function findOrCreateWithCache(
     modelName: 'productBrand' | 'category',
     name: string | undefined,
-    tx: TransactionClient
+    tx: TransactionClient,
+    cache: EntityCache
 ): Promise<string> {
     const safeName = (!name || name.trim() === '') ? 'Sin especificar' : name;
+    const cacheMap = modelName === 'productBrand' ? cache.brands : cache.categories;
 
-    // Usamos un switch para que TypeScript sepa exactamente qué modelo estamos usando en cada bloque
+    // Verificar cache primero
+    if (cacheMap.has(safeName)) {
+        return cacheMap.get(safeName)!;
+    }
+
+    let entityId: string;
+
     switch (modelName) {
         case 'productBrand': {
-            const existing = await tx.productBrand.findFirst({ where: { name: { path: ['es'], equals: safeName } } });
-            if (existing) return existing.id;
-            const created = await tx.productBrand.create({ data: { name: { es: safeName } } });
-            return created.id;
+            const existing = await tx.productBrand.findFirst({
+                where: { name: { path: ['es'], equals: safeName } }
+            });
+            if (existing) {
+                entityId = existing.id;
+            } else {
+                const created = await tx.productBrand.create({
+                    data: { name: { es: safeName } }
+                });
+                entityId = created.id;
+                dbLogger.debug({ brandName: safeName }, 'Nueva marca creada');
+            }
+            break;
         }
         case 'category': {
-            const existing = await tx.category.findFirst({ where: { name: { path: ['es'], equals: safeName } } });
-            if (existing) return existing.id;
-            const created = await tx.category.create({ data: { name: { es: safeName } } });
-            return created.id;
+            const existing = await tx.category.findFirst({
+                where: { name: { path: ['es'], equals: safeName } }
+            });
+            if (existing) {
+                entityId = existing.id;
+            } else {
+                const created = await tx.category.create({
+                    data: { name: { es: safeName } }
+                });
+                entityId = created.id;
+                dbLogger.debug({ categoryName: safeName }, 'Nueva categoría creada');
+            }
+            break;
         }
         default:
-            // Esto nunca debería ocurrir con los tipos actuales, pero es una buena práctica
-            throw new Error(`Modelo no soportado en findOrCreate: ${modelName}`);
+            throw new Error(`Modelo no soportado: ${modelName}`);
     }
+
+    // Agregar al cache
+    cacheMap.set(safeName, entityId);
+    return entityId;
+}
+
+/**
+ * Procesa un lote de productos
+ */
+async function processBatch(
+    products: any[],
+    batchIndex: number,
+    totalBatches: number,
+    cache: EntityCache
+): Promise<{ succeeded: number; failed: number; errors: any[] }> {
+    let succeeded = 0;
+    let failed = 0;
+    const errors: any[] = [];
+
+    jobLogger.info({
+        batch: batchIndex + 1,
+        totalBatches,
+        batchSize: products.length
+    }, 'Procesando lote de productos');
+
+    const operations: Prisma.PrismaPromise<any>[] = [];
+
+    try {
+        await prisma.$transaction(async (tx: TransactionClient) => {
+            for (const erpProduct of products) {
+                try {
+                    // Validar datos esenciales
+                    if (!erpProduct.c1_codi || erpProduct.c1_codi.trim() === '') {
+                        failed++;
+                        errors.push({
+                            error: 'Código de producto vacío',
+                            product: erpProduct
+                        });
+                        continue;
+                    }
+
+                    // Obtener IDs de marca y categoría (con cache)
+                    const brandId = await findOrCreateWithCache('productBrand', erpProduct.descmarc, tx, cache);
+                    const categoryId = await findOrCreateWithCache('category', erpProduct.c1_desg, tx, cache);
+
+                    // Generar descripción
+                    const brandName = erpProduct.descmarc || 'Sin especificar';
+                    const categoryName = erpProduct.c1_desg || 'Sin especificar';
+                    const generatedDescription = `Artículo: ${erpProduct.c1_desc}. Marca: ${brandName}. Categoría: ${categoryName}. Código de referencia: ${erpProduct.c1_codi}.`;
+
+                    // Crear/Actualizar Producto (SIN STOCK)
+                    await tx.product.upsert({
+                        where: { erpCode: erpProduct.c1_codi },
+                        update: {
+                            name: { es: erpProduct.c1_desc },
+                            sku: erpProduct.c1_codi,
+                            productBrandId: brandId,
+                            description: { es: generatedDescription },
+                            categoryId: categoryId,
+                            deletedAt: erpProduct.exportableweb ? null : new Date(),
+                        },
+                        create: {
+                            erpCode: erpProduct.c1_codi,
+                            sku: erpProduct.c1_codi,
+                            name: { es: erpProduct.c1_desc },
+                            description: { es: generatedDescription },
+                            productBrandId: brandId,
+                            categoryId: categoryId,
+                            deletedAt: erpProduct.exportableweb ? null : new Date(),
+                        },
+                    });
+
+                    // Crear/Actualizar Precios (solo si hay precios válidos)
+                    const prices = [
+                        { id: 1, value: erpProduct.c1_pre1 },
+                        { id: 2, value: erpProduct.c1_pre2 },
+                        { id: 3, value: erpProduct.c1_pre3 },
+                    ];
+
+                    for (const price of prices) {
+                        if (price.value && price.value > 0) {
+                            // Obtener el producto para su ID
+                            const product = await tx.product.findUnique({
+                                where: { erpCode: erpProduct.c1_codi },
+                                select: { id: true }
+                            });
+
+                            if (product) {
+                                await tx.price.upsert({
+                                    where: {
+                                        productId_priceListId_currency: {
+                                            productId: product.id,
+                                            priceListId: price.id,
+                                            currency: 'ARS'
+                                        }
+                                    },
+                                    update: { price: price.value },
+                                    create: {
+                                        productId: product.id,
+                                        priceListId: price.id,
+                                        price: price.value,
+                                        currency: 'ARS'
+                                    },
+                                });
+                            }
+                        }
+                    }
+
+                    succeeded++;
+
+                } catch (error) {
+                    failed++;
+                    errors.push({
+                        error: (error as Error).message,
+                        erpCode: erpProduct.c1_codi,
+                        productName: erpProduct.c1_desc
+                    });
+
+                    logError(error as Error, {
+                        context: 'syncProducts - Product processing in batch',
+                        erpCode: erpProduct.c1_codi,
+                        productName: erpProduct.c1_desc,
+                        batch: batchIndex + 1
+                    });
+                }
+            }
+        });
+
+        dbLogger.info({
+            batch: batchIndex + 1,
+            succeeded,
+            failed,
+            duration: `${Date.now()}ms`
+        }, 'Lote procesado exitosamente');
+
+    } catch (error) {
+        // Si falla toda la transacción, marcar todos como fallidos
+        failed = products.length;
+        succeeded = 0;
+        errors.push({
+            error: 'Transaction failed',
+            message: (error as Error).message,
+            batch: batchIndex + 1
+        });
+
+        logError(error as Error, {
+            context: 'syncProducts - Batch transaction failed',
+            batch: batchIndex + 1,
+            batchSize: products.length
+        });
+    }
+
+    return { succeeded, failed, errors };
 }
 
 export async function syncProducts() {
@@ -50,30 +231,18 @@ export async function syncProducts() {
     logJobExecution(jobName, 'start');
     jobLogger.info('INICIANDO Sincronización de Productos...');
 
-    let succeededCount = 0, failedCount = 0, brandCreatedCount = 0, categoryCreatedCount = 0;
-    const WAREHOUSE_ID = 'default-warehouse';
-    const WAREHOUSE_NAME = 'Almacén Principal - Barcalá 665';
-    try {
-        // Aseguramos que el almacén exista
-        jobLogger.info({ warehouseId: WAREHOUSE_ID, warehouseName: WAREHOUSE_NAME }, 'Verificando y asegurando la existencia del almacén por defecto...');
-        await prisma.warehouse.upsert({
-            where: { id: WAREHOUSE_ID },
-            update: { name: WAREHOUSE_NAME }, // Actualiza el nombre por si cambia
-            create: {
-                id: WAREHOUSE_ID,
-                name: WAREHOUSE_NAME,
-            },
-        });
-        jobLogger.info('Almacén por defecto asegurado en la base de datos.');
+    let totalSucceeded = 0;
+    let totalFailed = 0;
+    let totalBrandCreated = 0;
+    let totalCategoryCreated = 0;
+    const allErrors: any[] = [];
 
-        // 1. Obtener datos
+    try {
+        // 1. Obtener datos del ERP
         jobLogger.info('Obteniendo productos del ERP...');
         const rawDataObject = await fetchErpProducts();
 
-        console.log('ESTRUCTURA REAL DE LA API:', JSON.stringify(rawDataObject, null, 2));
-        jobLogger.info('Estructura de datos obtenida del ERP:', JSON.stringify(rawDataObject, null, 2));
-
-        // 2. Validar con Zod (¡directamente!)
+        // 2. Validar con Zod
         jobLogger.info('Validando datos con schema Zod...');
         const validationResult = erpProductsApiResponseSchema.safeParse(rawDataObject);
 
@@ -88,146 +257,71 @@ export async function syncProducts() {
 
         const erpProducts = validationResult.data.response.articulos;
         jobLogger.info({
-            totalProducts: erpProducts.length,
-            warehouseId: WAREHOUSE_ID
-        }, 'Productos validados exitosamente. Iniciando procesamiento...');
+            totalProducts: erpProducts.length
+        }, 'Productos validados exitosamente. Iniciando procesamiento en lotes...');
 
-        // 3. Iterar y guardar en la Base de Datos
-        for (let index = 0; index < erpProducts.length; index++) {
-            const erpProduct = erpProducts[index];
-            const productStart = Date.now();
+        // 3. Configurar cache y procesamiento en lotes
+        const cache: EntityCache = {
+            brands: new Map(),
+            categories: new Map()
+        };
 
-            try {
-                await prisma.$transaction(async (tx: TransactionClient) => {
-                    // Obtener IDs de Marca y Categoría
-                    const brandStart = Date.now();
-                    const brandName = erpProduct.descmarc || 'Sin especificar';
-                    const brandId = await findOrCreate('productBrand', erpProduct.descmarc, tx);
-                    const brandDuration = Date.now() - brandStart;
+        const BATCH_SIZE = 100; // Lotes más pequeños para mejor manejo de memoria
+        const batches: any[][] = [];
 
-                    const categoryStart = Date.now();
-                    const categoryId = await findOrCreate('category', erpProduct.c1_desg, tx);
-                    const categoryDuration = Date.now() - categoryStart;
-                    const categoryName = erpProduct.c1_desg || 'Sin especificar';
-
-                    const generatedDescription = `Artículo: ${erpProduct.c1_desc}. Marca: ${brandName}. Categoría: ${categoryName}. Código de referencia: ${erpProduct.c1_codi}.`;
-                    // Log si se crearon nuevas marcas o categorías
-                    if (brandDuration > 50) { // Si tardó más de 50ms, probablemente se creó
-                        brandCreatedCount++;
-                        dbLogger.debug({
-                            brandName: erpProduct.descmarc || 'Sin especificar',
-                            duration: `${brandDuration}ms`
-                        }, 'Brand processed');
-                    }
-
-                    if (categoryDuration > 50) {
-                        categoryCreatedCount++;
-                        dbLogger.debug({
-                            categoryName: erpProduct.c1_desg || 'Sin especificar',
-                            duration: `${categoryDuration}ms`
-                        }, 'Category processed');
-                    }
-
-                    // Crear/Actualizar Producto
-                    const product = await tx.product.upsert({
-                        where: {erpCode: erpProduct.c1_codi},
-                        update: {
-                            name: {es: erpProduct.c1_desc},
-                            sku: erpProduct.c1_codi,
-                            productBrandId: brandId,
-                            description: { es: generatedDescription },
-                            categoryId: categoryId,
-                            deletedAt: erpProduct.exportableweb ? null : new Date(),
-                        },
-                        create: {
-                            erpCode: erpProduct.c1_codi,
-                            sku: erpProduct.c1_codi,
-                            name: {es: erpProduct.c1_desc},
-                            description: { es: generatedDescription },
-                            productBrandId: brandId,
-                            categoryId: categoryId,
-                            deletedAt: erpProduct.exportableweb ? null : new Date(),
-                        },
-                    });
-
-                    // Crear/Actualizar Stock
-                    await tx.stockLevel.upsert({
-                        where: {productId_warehouseId: {productId: product.id, warehouseId: WAREHOUSE_ID}},
-                        update: {quantity: erpProduct.c1_stoc},
-                        create: {productId: product.id, warehouseId: WAREHOUSE_ID, quantity: erpProduct.c1_stoc},
-                    });
-
-                    // Crear/Actualizar Precios
-                    const prices = [
-                        {id: 1, value: erpProduct.c1_pre1},
-                        {id: 2, value: erpProduct.c1_pre2},
-                        {id: 3, value: erpProduct.c1_pre3},
-                    ];
-
-                    let pricesUpdated = 0;
-                    for (const p of prices) {
-                        if (p.value > 0) {
-                            await tx.price.upsert({
-                                where: {
-                                    productId_priceListId_currency: {
-                                        productId: product.id,
-                                        priceListId: p.id,
-                                        currency: 'ARS'
-                                    }
-                                },
-                                update: {price: p.value},
-                                create: {productId: product.id, priceListId: p.id, price: p.value},
-                            });
-                            pricesUpdated++;
-                        }
-                    }
-
-                    // Log detallado del producto procesado (solo en debug)
-                    const productDuration = Date.now() - productStart;
-                    dbLogger.debug({
-                        erpCode: erpProduct.c1_codi,
-                        productName: erpProduct.c1_desc,
-                        stock: erpProduct.c1_stoc,
-                        pricesUpdated,
-                        exportableWeb: erpProduct.exportableweb,
-                        duration: `${productDuration}ms`
-                    }, 'Product processed successfully');
-                });
-
-                succeededCount++;
-
-                // Log de progreso cada 100 productos
-                if ((index + 1) % 100 === 0) {
-                    jobLogger.info({
-                        processed: index + 1,
-                        total: erpProducts.length,
-                        succeeded: succeededCount,
-                        failed: failedCount,
-                        progress: `${((index + 1) / erpProducts.length * 100).toFixed(1)}%`
-                    }, 'Processing progress');
-                }
-
-            } catch (error) {
-                failedCount++;
-                logError(error as Error, {
-                    context: 'syncProducts - Product processing',
-                    erpCode: erpProduct.c1_codi,
-                    productName: erpProduct.c1_desc,
-                    productIndex: index
-                });
-            }
+        for (let i = 0; i < erpProducts.length; i += BATCH_SIZE) {
+            batches.push(erpProducts.slice(i, i + BATCH_SIZE));
         }
+
+        jobLogger.info({
+            totalBatches: batches.length,
+            batchSize: BATCH_SIZE
+        }, 'Procesando productos en lotes');
+
+        // 4. Procesar lotes
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            const batchResult = await processBatch(batch, i, batches.length, cache);
+
+            totalSucceeded += batchResult.succeeded;
+            totalFailed += batchResult.failed;
+            allErrors.push(...batchResult.errors);
+
+            // Log de progreso
+            const progress = ((i + 1) / batches.length * 100).toFixed(1);
+            jobLogger.info({
+                batch: i + 1,
+                totalBatches: batches.length,
+                progress: `${progress}%`,
+                batchSucceeded: batchResult.succeeded,
+                batchFailed: batchResult.failed,
+                totalSucceeded,
+                totalFailed
+            }, 'Progreso del procesamiento');
+        }
+
+        // 5. Métricas finales
+        totalBrandCreated = cache.brands.size;
+        totalCategoryCreated = cache.categories.size;
 
         const duration = Date.now() - startTime;
         const metadata = {
             totalProducts: erpProducts.length,
-            succeededCount,
-            failedCount,
-            brandCreatedCount,
-            categoryCreatedCount,
-            successRate: `${((succeededCount / erpProducts.length) * 100).toFixed(2)}%`,
-            warehouseId: WAREHOUSE_ID
+            succeededCount: totalSucceeded,
+            failedCount: totalFailed,
+            brandCreatedCount: totalBrandCreated,
+            categoryCreatedCount: totalCategoryCreated,
+            successRate: `${((totalSucceeded / erpProducts.length) * 100).toFixed(2)}%`,
+            totalBatches: batches.length,
+            batchSize: BATCH_SIZE
         };
+
+        if (allErrors.length > 0) {
+            jobLogger.warn({
+                ...metadata,
+                errorSample: allErrors.slice(0, 5) // Solo mostrar primeros 5 errores
+            }, 'Sincronización de Productos completada con errores');
+        }
 
         logJobExecution(jobName, 'success', duration, undefined, metadata);
         jobLogger.info(metadata, 'Sincronización de Productos FINALIZADA exitosamente');
@@ -235,21 +329,12 @@ export async function syncProducts() {
     } catch (error) {
         const duration = Date.now() - startTime;
         logJobExecution(jobName, 'error', duration, error as Error, {
-            succeededCount,
-            failedCount,
-            totalProcessed: succeededCount + failedCount
+            totalSucceeded,
+            totalFailed,
+            totalProcessed: totalSucceeded + totalFailed
         });
 
-        logError(error as Error, {context: 'syncProducts - Catastrophic failure'});
+        logError(error as Error, { context: 'syncProducts - Catastrophic failure' });
         throw error;
     }
 }
-
-// Función para ejecutar el sync manualmente o desde un scheduler
-export const runProductSync = async () => {
-    try {
-        await syncProducts();
-    } catch (error) {
-        logError(error as Error, {context: 'Product sync job execution'});
-    }
-};
