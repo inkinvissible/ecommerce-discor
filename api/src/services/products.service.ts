@@ -1,176 +1,223 @@
-// api/src/services/products.service.ts
+// services/products.service.ts
 
 import { prisma } from '../lib/prisma';
 import {
-    ProductServiceError,
     GetProductsListParams,
     ProductsListResponse,
     ProductDetail,
-    MultiLanguageContent,
-    PriceBreakdown
+    DbProduct,
+    ProductWithScore,
+    SearchCondition
 } from '../types/products';
 
+import {
+    buildSearchConditions,
+    calculateRelevanceScore,
+    processSearchParams
+} from '../utils/search.utils';
+
+import {
+    calculatePriceBreakdownForClient,
+    validateClientPriceList
+} from '../utils/pricing.utils';
+
+import { calculateTotalStock } from '../utils/stock.utils';
+
+import {
+    mapDbProductToListItem,
+    mapDbProductToDetail,
+    addRelevanceScore,
+    removeRelevanceScore,
+    sortProductsByRelevance
+} from '../mappers/products.mapper';
+
 /**
- * Calcula el desglose completo de precios para un cliente específico
+ * Construye la cláusula WHERE para la consulta de productos
  */
-async function calculatePriceBreakdownForClient(productId: string, clientId: string): Promise<PriceBreakdown> {
-    // Obtener información del cliente
-    const client = await prisma.client.findUnique({
-        where: { id: clientId },
+function buildWhereClause(search?: string): { deletedAt: null; OR?: SearchCondition[] } {
+    const whereClause: { deletedAt: null; OR?: SearchCondition[] } = {
+        deletedAt: null // Solo productos activos
+    };
+
+    if (search && search.trim()) {
+        const decodedSearch = decodeURIComponent(search.trim());
+        const searchConditions = buildSearchConditions(decodedSearch);
+        whereClause.OR = searchConditions;
+    }
+
+    return whereClause;
+}
+
+/**
+ * Obtiene productos de la base de datos con sus relaciones
+ */
+async function fetchProductsFromDb(
+    whereClause: { deletedAt: null; OR?: SearchCondition[] },
+    priceListId: number,
+    skip?: number,
+    take?: number
+): Promise<DbProduct[]> {
+    const queryOptions: any = {
+        where: whereClause,
         include: {
-            pricingConfigs: true
+            brand: true,
+            category: true,
+            prices: {
+                where: {
+                    priceListId: priceListId
+                }
+            }
         }
-    });
+    };
 
-    if (!client) {
-        throw new ProductServiceError('Cliente no encontrado', 404);
+    if (skip !== undefined) queryOptions.skip = skip;
+    if (take !== undefined) queryOptions.take = take;
+
+    // Agregar ordenamiento solo si no hay paginación (sin búsqueda)
+    if (skip !== undefined && take !== undefined) {
+        queryOptions.orderBy = {
+            sku: 'asc' // Cambiado a un campo string normal
+        };
     }
 
-    // Obtener el precio base del producto según la lista de precios del cliente
-    const basePrice = await prisma.price.findFirst({
-        where: {
-            productId: productId,
-            priceListId: client.priceListId
-        }
-    });
+    const products = await prisma.product.findMany(queryOptions);
+    return products as unknown as DbProduct[];
+}
 
-    if (!basePrice) {
-        throw new ProductServiceError('Precio no encontrado para este producto', 404);
-    }
+/**
+ * Procesa productos aplicando score de relevancia y ordenamiento
+ */
+function processProductsWithRelevance(
+    products: DbProduct[],
+    searchTerm: string
+): DbProduct[] {
+    // Calcular score de relevancia para cada producto
+    const productsWithScore: ProductWithScore[] = products.map(product =>
+        addRelevanceScore(product, calculateRelevanceScore(product, searchTerm))
+    );
 
-    const listPrice = basePrice.price.toNumber();
-    let discountedPrice = listPrice;
-    let finalPrice = listPrice;
+    // Ordenar por relevancia
+    const sortedProducts = sortProductsByRelevance(productsWithScore);
 
-    const discountPercentage = client.discountPercentage.toNumber();
-    const markupPercentage = client.pricingConfigs?.markupPercentage?.toNumber() || 0;
+    // Remover score y devolver productos ordenados
+    return sortedProducts.map(removeRelevanceScore);
+}
 
-    // Aplicar descuento del cliente si existe
-    if (discountPercentage > 0) {
-        const discountAmount = listPrice * (discountPercentage / 100);
-        discountedPrice = listPrice - discountAmount;
-        finalPrice = discountedPrice;
-    }
+/**
+ * Aplica paginación a una lista de productos
+ */
+function applyPagination<T>(items: T[], page: number, limit: number): T[] {
+    const skip = (page - 1) * limit;
+    return items.slice(skip, skip + limit);
+}
 
-    // Aplicar markup personalizado si existe
-    if (markupPercentage > 0) {
-        const markupAmount = finalPrice * (markupPercentage / 100);
-        finalPrice = finalPrice + markupAmount;
-    }
+/**
+ * Enriquece productos con información de precios y stock
+ */
+async function enrichProductsWithPricingAndStock(
+    products: DbProduct[],
+    clientId: string
+): Promise<any[]> {
+    return await Promise.all(
+        products.map(async (product) => {
+            const [priceBreakdown, stock] = await Promise.all([
+                calculatePriceBreakdownForClient(product.id, clientId),
+                calculateTotalStock(product.id)
+            ]);
 
-    // Aplicar IVA si corresponde
-    if (client.applyVat) {
-        finalPrice = finalPrice * 1.21; // IVA del 21%
-    }
+            return mapDbProductToListItem(product, priceBreakdown, stock);
+        })
+    );
+}
+
+/**
+ * Maneja la búsqueda con ordenamiento por relevancia
+ */
+async function handleSearchWithRelevance(
+    params: GetProductsListParams,
+    whereClause: { deletedAt: null; OR?: SearchCondition[] },
+    priceListId: number
+): Promise<ProductsListResponse> {
+    const { page, limit, search, clientId } = params;
+    const decodedSearch = decodeURIComponent(search!.trim());
+
+    // Obtener TODOS los productos que coinciden con la búsqueda
+    const allProducts = await fetchProductsFromDb(whereClause, priceListId);
+
+    // Procesar productos con relevancia
+    const sortedProducts = processProductsWithRelevance(allProducts, decodedSearch);
+
+    // Aplicar paginación después del ordenamiento
+    const totalCount = sortedProducts.length;
+    const paginatedProducts = applyPagination(sortedProducts, page, limit);
+
+    // Enriquecer con precios y stock
+    const enrichedProducts = await enrichProductsWithPricingAndStock(
+        paginatedProducts,
+        clientId
+    );
 
     return {
-        listPrice: Math.round(listPrice * 100) / 100,
-        discountedPrice: Math.round(discountedPrice * 100) / 100,
-        finalPrice: Math.round(finalPrice * 100) / 100,
-        discountPercentage,
-        markupPercentage,
-        hasVat: client.applyVat
+        data: enrichedProducts,
+        pagination: {
+            totalItems: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        }
     };
 }
 
 /**
- * Calcula el stock total de un producto
+ * Maneja la consulta normal sin búsqueda
  */
-async function calculateTotalStock(productId: string): Promise<number> {
-    const stockLevels = await prisma.stockLevel.findMany({
-        where: { productId }
-    });
+async function handleNormalQuery(
+    params: GetProductsListParams,
+    whereClause: { deletedAt: null; OR?: SearchCondition[] },
+    priceListId: number
+): Promise<ProductsListResponse> {
+    const { page, limit, clientId } = params;
+    const skip = (page - 1) * limit;
 
-    return stockLevels.reduce((total: number, level: any) => total + level.quantity, 0);
+    // Obtener productos con paginación y ordenamiento por nombre
+    const [products, totalCount] = await Promise.all([
+        fetchProductsFromDb(whereClause, priceListId, skip, limit),
+        prisma.product.count({ where: whereClause })
+    ]);
+
+    // Enriquecer con precios y stock
+    const enrichedProducts = await enrichProductsWithPricingAndStock(
+        products,
+        clientId
+    );
+
+    return {
+        data: enrichedProducts,
+        pagination: {
+            totalItems: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        }
+    };
 }
 
 /**
  * Obtiene una lista paginada de productos con precios calculados para el cliente
  */
 export async function getProductsList(params: GetProductsListParams): Promise<ProductsListResponse> {
-    const { clientId, page, limit, search } = params;
-    const skip = (page - 1) * limit;
+    const { search, clientId } = params;
+
+    // Validar que el cliente tenga lista de precios
+    const priceListId = await validateClientPriceList(clientId);
 
     // Construir filtros de búsqueda
-    const whereClause: any = {
-        deletedAt: null // Solo productos activos
-    };
+    const whereClause = buildWhereClause(search);
 
-    if (search) {
-        whereClause.OR = [
-            {
-                name: {
-                    path: ['es'], // Asumiendo que el nombre está en español
-                    string_contains: search
-                }
-            },
-            {
-                sku: {
-                    contains: search,
-                    mode: 'insensitive'
-                }
-            }
-        ];
+    // Decidir estrategia según si hay búsqueda o no
+    if (search && search.trim()) {
+        return await handleSearchWithRelevance(params, whereClause, priceListId);
+    } else {
+        return await handleNormalQuery(params, whereClause, priceListId);
     }
-
-    // Obtener productos con paginación
-    const [products, totalCount] = await Promise.all([
-        prisma.product.findMany({
-            where: whereClause,
-            include: {
-                brand: true,
-                category: true,
-                prices: {
-                    where: {
-                        priceListId: (await prisma.client.findUnique({
-                            where: { id: clientId },
-                            select: { priceListId: true }
-                        }))?.priceListId
-                    }
-                }
-            },
-            skip,
-            take: limit,
-            orderBy: { name: 'asc' }
-        }),
-        prisma.product.count({ where: whereClause })
-    ]);
-
-    // Calcular precios y stock para cada producto
-    const productsWithPricing = await Promise.all(
-        products.map(async (product: any) => {
-            const [priceBreakdown, stock] = await Promise.all([
-                calculatePriceBreakdownForClient(product.id, clientId),
-                calculateTotalStock(product.id)
-            ]);
-
-            return {
-                id: product.id,
-                name: product.name as MultiLanguageContent,
-                sku: product.sku,
-                price: priceBreakdown.finalPrice, // Mantener compatibilidad con precio final
-                priceBreakdown: priceBreakdown,
-                stock,
-                brand: {
-                    name: product.brand.name as MultiLanguageContent
-                },
-                category: {
-                    name: product.category.name as MultiLanguageContent
-                }
-            };
-        })
-    );
-
-    const totalPages = Math.ceil(totalCount / limit);
-
-    return {
-        data: productsWithPricing,
-        pagination: {
-            totalItems: totalCount,
-            totalPages,
-            currentPage: page
-        }
-    };
 }
 
 /**
@@ -186,7 +233,7 @@ export async function getProductById(productId: string, clientId: string): Promi
             brand: true,
             category: true
         }
-    });
+    }) as DbProduct | null;
 
     if (!product) {
         return null;
@@ -198,21 +245,8 @@ export async function getProductById(productId: string, clientId: string): Promi
         calculateTotalStock(product.id)
     ]);
 
-    return {
-        id: product.id,
-        name: product.name as MultiLanguageContent,
-        description: product.description as MultiLanguageContent,
-        sku: product.sku,
-        price: priceBreakdown.finalPrice, // Mantener compatibilidad con precio final
-        priceBreakdown: priceBreakdown,
-        stock,
-        brand: {
-            name: product.brand.name as MultiLanguageContent
-        },
-        category: {
-            name: product.category.name as MultiLanguageContent
-        },
-        attributes: (product.attributes as any) || {}
-    };
+    return mapDbProductToDetail(product, priceBreakdown, stock);
 }
 
+// Re-exportar utilidades útiles
+export { processSearchParams } from '../utils/search.utils';

@@ -1,3 +1,5 @@
+import { Decimal } from '@prisma/client/runtime/library'
+
 export class ProductServiceError extends Error {
     public statusCode: number;
 
@@ -78,4 +80,99 @@ export interface ProductDetail {
         name: MultiLanguageContent;
     };
     attributes: ProductAttributes;
+}
+// Tipos para entidades de base de datos
+export interface DbProduct {
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    erpCode: string | null;
+    name: MultiLanguageContent;
+    sku: string | null;
+    description: MultiLanguageContent;
+    productBrandId: string;
+    categoryId: string;
+    attributes: Record<string, any>;
+    // Añade las relaciones como opcionales si es necesario
+    brand: DbBrand;
+    category: DbCategory;
+    prices?: DbPrice[];
+}
+
+export interface DbBrand {
+    name: MultiLanguageContent;
+}
+
+export interface DbCategory {
+    name: MultiLanguageContent;
+}
+
+export interface DbPrice {
+    id: string;
+    productId: string;
+    priceListId: number;
+    price: Decimal | number;
+}
+
+export interface DbClient {
+    id: string;
+    priceListId: number;
+    discountPercentage: Decimal | number;
+    applyVat: boolean;
+    pricingConfigs?: DbPricingConfig | null;
+}
+
+export interface DbPricingConfig {
+    markupPercentage: number;
+}
+
+export interface DbStockLevel {
+    productId: string;
+    quantity: number;
+}
+
+export interface SearchCondition {
+    OR?: SearchCondition[];
+    AND?: SearchCondition[];
+    name?: {
+        path: string[];
+        string_contains: string;
+        mode: 'insensitive';
+    };
+    description?: {
+        path: string[];
+        string_contains: string;
+        mode: 'insensitive';
+    };
+    sku?: {
+        contains: string;
+        mode: 'insensitive';
+    };
+}
+
+export interface ProductWithScore extends DbProduct {
+    relevanceScore: number;
+}
+
+export interface AbbreviationsMap {
+    [key: string]: string;
+}
+
+export function toNumber(value: Decimal | number | null | undefined): number {
+    if (value === null || value === undefined) {
+        return 0;
+    }
+
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    // Si es un Decimal de Prisma
+    if (value && typeof value === 'object' && 'toNumber' in value) {
+        return (value as Decimal).toNumber();
+    }
+
+    // Fallback: intentar convertir a number
+    return Number(value) || 0;
 }

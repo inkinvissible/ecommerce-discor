@@ -1,7 +1,7 @@
 // api/src/controllers/products.controller.ts
 
 import { Request, Response } from 'express';
-import { getProductsList, getProductById } from '../services/products.service';
+import { getProductsList, getProductById, processSearchParams } from '../services/products.service';
 import { getProductsQuerySchema, getProductParamsSchema } from '../schemas/products';
 
 
@@ -20,11 +20,14 @@ export async function getProductsHandler(req: Request, res: Response): Promise<v
         const { page, limit, search } = queryValidation.data;
         const clientId = req.user!.clientId;
 
+        // Procesar el parámetro de búsqueda usando la nueva función
+        const processedSearch = processSearchParams(search);
+
         const result = await getProductsList({
             clientId,
             page,
             limit,
-            search
+            search: processedSearch
         });
 
         res.status(200).json(result);

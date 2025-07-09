@@ -18,6 +18,9 @@ export async function syncStock() {
     const WAREHOUSE_ID = 'default-warehouse';
     const WAREHOUSE_NAME = 'Almacén Principal - Barcalá 665';
 
+    // Almacenamos los códigos de Artículos omitidos
+    const skippedItems: { erpCode: string; stock: number }[] = [];
+
     try {
         // 1. Asegurar que el almacén por defecto exista
         jobLogger.info({ warehouseId: WAREHOUSE_ID, warehouseName: WAREHOUSE_NAME }, 'Verificando y asegurando la existencia del almacén por defecto...');
@@ -124,9 +127,15 @@ export async function syncStock() {
                 }
             } else {
                 skippedCount++;
+
+                skippedItems.push({
+                    erpCode: item.CODIGOARTICULO,
+                    stock: typeof item.STOCK === 'number' ? item.STOCK : 0
+                });
+
                 jobLogger.warn({
                     erpCode: item.CODIGOARTICULO
-                }, 'Stock omitido: Producto no encontrado en la base de datos local.');
+                }, 'Stock omitido: Producto no encontrado en la base de datos local. Artículo: ', item.CODIGOARTICULO);
             }
         }
 
@@ -171,11 +180,30 @@ export async function syncStock() {
             dbDuration: `${transactionDuration}ms`
         };
 
-        logJobExecution(jobName, 'success', duration, undefined, metadata);
+        if (skippedItems.length > 0) {
+            jobLogger.warn({
+                skippedItemsCount: skippedItems.length,
+                sampleSkippedItems: skippedItems.slice(0, 20), // Mostrar solo 20 como muestra
+                totalSkipped: skippedItems.length
+            }, 'Artículos omitidos durante la sincronización de stock');
+        }
+
+        logJobExecution(jobName, 'success', duration, undefined, {
+            ...metadata,
+            skippedItemsCount: skippedItems.length  // Nuevo: incluir conteo en metadata
+        });
+
         jobLogger.info(metadata, 'Sincronización de Stock FINALIZADA exitosamente');
 
     } catch (error) {
         const duration = Date.now() - startTime;
+        if (skippedItems.length > 0) {
+            jobLogger.warn({
+                skippedItemsCount: skippedItems.length,
+                sampleSkippedItems: skippedItems.slice(0, 20),
+                totalSkipped: skippedItems.length
+            }, 'Artículos omitidos durante la sincronización de stock');
+        }
         logJobExecution(jobName, 'error', duration, error as Error);
         logError(error as Error, { context: 'syncStock - Catastrophic failure' });
         throw error;

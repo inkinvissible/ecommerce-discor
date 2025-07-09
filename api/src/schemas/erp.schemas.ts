@@ -76,8 +76,11 @@ export type ErpClient = z.infer<typeof erpClientSchema>;
 
 const messyStringToNumber = z.string().transform((val) => {
     if (!val) return 0;
-    const cleanVal = val.replace(/\./g, '').replace(',', '.');
-    return parseFloat(cleanVal) || 0;
+    // 1. Eliminar todas las COMAS (separadores de miles)
+    const withoutCommas = val.replace(/,/g, '');
+
+    // 2. Convertir a número flotante directamente
+    return parseFloat(withoutCommas) || 0;
 });
 
 // Transforma 'S'/'N' a booleano true/false.
@@ -108,7 +111,6 @@ export const erpProductSchema = z.object({
     c1_pre1: messyStringToNumber, // -> Price.price para priceListId: 1
     c1_pre2: messyStringToNumber, // -> Price.price para priceListId: 2
     c1_pre3: messyStringToNumber, // -> Price.price para priceListId: 3
-    // ... puedes añadir más si los necesitas
 
     // --- Visibilidad y Estado ---
     exportableweb: stringToBoolean, // Determina si el producto está "activo" en la web
