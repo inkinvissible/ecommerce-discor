@@ -51,10 +51,10 @@ export async function getProductByIdHandler(req: Request, res: Response): Promis
             return;
         }
 
-        const { productId } = paramsValidation.data;
+        const { id } = paramsValidation.data;
         const clientId = req.user!.clientId;
 
-        const product = await getProductById(productId, clientId);
+        const product = await getProductById(id, clientId);
 
         if (!product) {
             res.status(404).json({ message: 'Producto no encontrado' });

@@ -215,3 +215,4 @@ export async function getProductById(productId: string, clientId: string): Promi
         attributes: (product.attributes as any) || {}
     };
 }
+
