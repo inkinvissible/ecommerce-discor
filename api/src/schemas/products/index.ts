@@ -21,7 +21,11 @@ export const getProductsQuerySchema = z.object({
         .transform(val => val?.trim())
         .refine(val => !val || val.length >= 2, {
             message: 'Search term must be at least 2 characters long'
-        })
+        }),
+    categoryIds: z.union([z.string().uuid(), z.array(z.string().uuid())]).optional().transform(val => {
+        if (!val) return undefined;
+        return Array.isArray(val) ? val : [val];
+    })
 });
 
 // Schema para validar parámetros de ruta del endpoint GET /api/products/:id

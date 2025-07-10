@@ -17,7 +17,7 @@ export async function getProductsHandler(req: Request, res: Response): Promise<v
             return;
         }
 
-        const { page, limit, search } = queryValidation.data;
+        const { page, limit, search, categoryIds } = queryValidation.data;
         const clientId = req.user!.clientId;
 
         // Procesar el parámetro de búsqueda usando la nueva función
@@ -27,7 +27,8 @@ export async function getProductsHandler(req: Request, res: Response): Promise<v
             clientId,
             page,
             limit,
-            search: processedSearch
+            search: processedSearch,
+            categoryIds
         });
 
         res.status(200).json(result);

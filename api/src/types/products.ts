@@ -28,6 +28,7 @@ export interface GetProductsListParams {
     page: number;
     limit: number;
     search?: string;
+    categoryIds?: string[];
 }
 
 // Tipos para información detallada de precios
@@ -159,6 +160,13 @@ export interface AbbreviationsMap {
     [key: string]: string;
 }
 
+// Tipo para las condiciones de búsqueda más específico
+export interface ProductWhereInput {
+    deletedAt: null;
+    categoryId?: { in: string[] };
+    OR?: SearchCondition[];
+}
+
 export function toNumber(value: Decimal | number | null | undefined): number {
     if (value === null || value === undefined) {
         return 0;
@@ -176,3 +184,27 @@ export function toNumber(value: Decimal | number | null | undefined): number {
     // Fallback: intentar convertir a number
     return Number(value) || 0;
 }
+
+// Función utilitaria para validar UUID
+export function isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+}
+
+// Función utilitaria para sanitizar strings de búsqueda
+export function sanitizeSearchTerm(term: string): string {
+    return term.trim().replace(/[<>]/g, '');
+}
+
+// Constantes
+export const PAGINATION_DEFAULTS = {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 20,
+    MAX_LIMIT: 100,
+    MIN_LIMIT: 1
+} as const;
+
+export const SEARCH_DEFAULTS = {
+    MIN_SEARCH_LENGTH: 2,
+    MAX_SEARCH_LENGTH: 100
+} as const;
