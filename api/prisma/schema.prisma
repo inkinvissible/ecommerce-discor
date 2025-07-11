@@ -77,6 +77,7 @@ model Address {
   alias               String
   street              String
   city                String
+  province            String
   zipCode             String
   isDefaultShipping   Boolean   @default(false)
   deletedAt           DateTime? // Soft Delete
@@ -86,6 +87,8 @@ model Address {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([clientId, alias])
 }
 
 // --- PRODUCTS & CATALOG ---
@@ -259,17 +262,23 @@ model Order {
   isFreeShipping      Boolean   @default(false)
   totalAmount         Decimal   @db.Decimal(12, 2)
   currency            String
-  shippingAddressId   String
+  shippingAddressId   String?
   shippingNotes       String?
+  shippingMethod      ShippingMethod
 
   user                User                      @relation(fields: [userId], references: [id])
   client              Client                    @relation(fields: [clientId], references: [id])
-  shippingAddress     Address                   @relation(fields: [shippingAddressId], references: [id])
+  shippingAddress     Address?                   @relation(fields: [shippingAddressId], references: [id])
   items               OrderItem[]
   appliedPromotions   OrderAppliedPromotion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum ShippingMethod {
+  DELIVERY
+  PICKUP
 }
 
 model OrderItem {

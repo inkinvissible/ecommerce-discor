@@ -7,6 +7,7 @@ import { logJobExecution, jobLogger, logError, serverLogger } from '../lib/logge
 import { syncProducts } from './sync/syncProducts';
 import { syncStock } from './sync/syncStock';
 import { syncClients } from './sync/syncClients';
+import { syncShippingZones} from "./sync/syncShippingZones";
 
 // Definir dependencias entre jobs
 interface JobDefinition {
@@ -46,22 +47,31 @@ async function main() {
 
     // Definir jobs FUERA del bloque try para que esté disponible en finally
     const jobs: JobDefinition[] = [
+        // {
+        //     name: 'syncProducts',
+        //     fn: syncProducts,
+        //     dependencies: [],
+        //     critical: true
+        // },
+        // {
+        //     name: 'syncStock',
+        //     fn: syncStock,
+        //     dependencies: ['syncProducts'], // Stock necesita productos
+        //     critical: false
+        // },
         {
-            name: 'syncProducts',
-            fn: syncProducts,
+            name: 'syncShippingZones',
+            fn: syncShippingZones,
             dependencies: [],
+            critical: true // Crítico porque syncClients depende de esto
+        },
+        {
+            name: 'syncClients',
+            fn: syncClients,
+            dependencies: ['syncShippingZones'], // <-- DEPENDE DE LAS ZONAS
             critical: true
         },
-        {
-            name: 'syncStock',
-            fn: syncStock,
-            dependencies: ['syncProducts'], // Stock necesita productos
-            critical: false
-        },
-        // Futuros jobs:
-        //{ name: 'syncClients', fn: syncClients, dependencies: [], critical: true },
-        // { name: 'syncPrices', fn: syncPrices, dependencies: ['syncProducts'], critical: false },
-    ];
+         ];
 
     jobLogger.info('============================================');
     jobLogger.info('=== INICIO DEL PROCESO DE SINCRONIZACIÓN ===');

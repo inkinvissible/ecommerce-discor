@@ -71,6 +71,7 @@ export const erpClientsApiResponseSchema = z.object({
         error: z.string().optional(),
     })
 });
+
 export type ErpClient = z.infer<typeof erpClientSchema>;
 
 
@@ -173,3 +174,16 @@ export const erpStockApiResponseSchema = z.object({
 // Extraemos el tipo inferido para tener autocompletado.
 export type ErpStockItem = z.infer<typeof erpStockItemSchema>;
 
+export const erpProvinceSchema = z.object({
+    COD_PROV: messyStringToInteger,
+    DESC_PRO: z.string().min(1, 'El nombre de la provincia no puede estar vacío'),
+}).strip(); // .strip() es bueno para ignorar los otros campos como FACTOR, COD_AFIP, etc.
+
+// Tu schema de la RESPUESTA COMPLETA
+export const erpProvincesApiResponseSchema = z.object({
+    Provincias_response: z.object({
+        Provincias: z.array(erpProvinceSchema), // Cambié el nombre para mayor claridad
+    }),
+});
+
+export type ErpProvince = z.infer<typeof erpProvinceSchema>;

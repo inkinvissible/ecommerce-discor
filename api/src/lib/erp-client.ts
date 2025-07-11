@@ -125,3 +125,24 @@ export const fetchErpStock = async () => {
         throw error;
     }
 };
+
+export const fetchErpProvinces = async () => {
+    try {
+        const startTime = Date.now();
+        const response = await erpClient.get('/ProvinciasDB');
+        const duration = Date.now() - startTime;
+
+        erpLogger.info({
+            ProvinceItemsCount: response.data?.Provincias_response?.articulos?.length || 0,
+            duration: `${duration}ms`
+        }, 'Provinces data fetched successfully from ERP');
+
+        return response.data;
+    } catch (error) {
+        logError(error as Error, {
+            context: 'fetchErpProvinces',
+            endpoint: '/ProvinciasDB' // Ajusta si el endpoint es diferente
+        });
+        throw error;
+    }
+};
