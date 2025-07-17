@@ -47,18 +47,18 @@ async function main() {
 
     // Definir jobs FUERA del bloque try para que esté disponible en finally
     const jobs: JobDefinition[] = [
-        // {
-        //     name: 'syncProducts',
-        //     fn: syncProducts,
-        //     dependencies: [],
-        //     critical: true
-        // },
-        // {
-        //     name: 'syncStock',
-        //     fn: syncStock,
-        //     dependencies: ['syncProducts'], // Stock necesita productos
-        //     critical: false
-        // },
+        {
+            name: 'syncProducts',
+            fn: syncProducts,
+            dependencies: [],
+            critical: true
+        },
+        {
+            name: 'syncStock',
+            fn: syncStock,
+            dependencies: ['syncProducts'], // Stock necesita productos
+            critical: false
+        },
         {
             name: 'syncShippingZones',
             fn: syncShippingZones,

@@ -10,9 +10,7 @@ RUN apt-get update && apt-get install -y openssl
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Instala TODAS las dependencias, incluyendo las de desarrollo como nodemon.
-RUN npm install
-RUN npx prisma generate
+
 # Copia el resto del código (aunque el volumen lo sobreescribirá, es buena práctica tenerlo).
 COPY . .
 

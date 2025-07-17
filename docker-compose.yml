@@ -12,27 +12,71 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - ecommerce_network
+    # Healthcheck para asegurar que la DB esté lista
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
       context: ./api
-      # ¡Aquí está la magia! Le decimos que use el Dockerfile de desarrollo.
       dockerfile: Dockerfile.dev
     restart: always
     ports:
       - '4000:4000'
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./api/.env
     volumes:
-      # Sincroniza tu código local con el contenedor para live-reloading.
       - ./api:/app
-      # Evita conflictos con node_modules.
       - /app/node_modules
-    command: npm run dev
+    command: >
+      sh -c "
+        echo '🚀 Iniciando API...' &&
+        npm install &&
+        npx prisma generate &&
+        npx prisma migrate deploy &&
+        echo '✅ Base de datos sincronizada' &&
+        npm run dev
+      "
     networks:
       - ecommerce_network
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+
+  worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    env_file:
+      - ./api/.env
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    command: >
+      sh -c "
+        echo '👷 Iniciando Workers...' &&
+        npm install &&
+        npx prisma generate &&
+        echo '🔄 Ejecutando worker manager...' &&
+        npm run dev:worker
+      "
+    networks:
+      - ecommerce_network
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
 
 networks:
   ecommerce_network:

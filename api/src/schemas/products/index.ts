@@ -30,7 +30,7 @@ export const getProductsQuerySchema = z.object({
 
 // Schema para validar parámetros de ruta del endpoint GET /api/products/:id
 export const getProductParamsSchema = z.object({
-    id: z.string()
+    productId: z.string()
         .uuid({ message: 'Product ID must be a valid UUID' })
 });
 

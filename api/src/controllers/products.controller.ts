@@ -1,7 +1,7 @@
 // api/src/controllers/products.controller.ts
 
 import { Request, Response } from 'express';
-import { getProductsList, getProductById, processSearchParams } from '../services/products.service';
+import { getProductsList, getProductById, processSearchParams, getCategoriesList } from '../services/products.service';
 import { getProductsQuerySchema, getProductParamsSchema } from '../schemas/products';
 
 
@@ -45,6 +45,7 @@ export async function getProductsHandler(req: Request, res: Response): Promise<v
 
 export async function getProductByIdHandler(req: Request, res: Response): Promise<void> {
     try {
+        console.log('req.params:', req.params);
         // Validar params
         const paramsValidation = getProductParamsSchema.safeParse(req.params);
         if (!paramsValidation.success) {
@@ -55,10 +56,10 @@ export async function getProductByIdHandler(req: Request, res: Response): Promis
             return;
         }
 
-        const { id } = paramsValidation.data;
+        const { productId } = paramsValidation.data;
         const clientId = req.user!.clientId;
 
-        const product = await getProductById(id, clientId);
+        const product = await getProductById(productId, clientId);
 
         if (!product) {
             res.status(404).json({ message: 'Producto no encontrado' });
@@ -68,6 +69,22 @@ export async function getProductByIdHandler(req: Request, res: Response): Promis
         res.status(200).json(product);
     } catch (error: any) {
         console.error("Error en getProductByIdHandler:", error);
+
+        if (error.name === 'ProductServiceError') {
+            res.status(error.statusCode).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: 'Error interno del servidor.' });
+        }
+    }
+}
+export async function getCategoriesHandler(req: Request, res: Response): Promise<void> {
+    try {
+        const clientId = req.user!.clientId;
+        const categories = await getCategoriesList(clientId);
+
+        res.status(200).json(categories);
+    } catch (error: any) {
+        console.error("Error en getCategoriesHandler:", error);
 
         if (error.name === 'ProductServiceError') {
             res.status(error.statusCode).json({ message: error.message });

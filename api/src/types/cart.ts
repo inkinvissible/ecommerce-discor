@@ -57,7 +57,8 @@ export interface CartItem {
 // Resumen del carrito
 export interface CartSummary {
     totalItems: number;    // Cantidad total de productos
-    totalAmount: number;   // Monto total del carrito
+    totalAmount: number; // Monto total del carrito
+    totalAmountWithVat: number; // Monto total con IVA
     itemsCount: number;    // Número de productos únicos
 }
 

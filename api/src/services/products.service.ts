@@ -412,5 +412,36 @@ export async function getProductById(
     }
 }
 
+export async function getCategoriesList(clientId: string): Promise<any[]> {
+    try {
+        if (!clientId?.trim()) {
+            throw new Error('ID de cliente es requerido');
+        }
+
+        const categories = await prisma.category.findMany({
+            where: {
+                deletedAt: null
+            },
+            select: {
+                id: true,
+                name: true,
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+
+        return categories;
+    } catch (error) {
+        console.error('Error en getCategoriesList:', error);
+
+        if (error instanceof Error) {
+            throw error;
+        }
+
+        throw new Error('Error al obtener categorías');
+    }
+}
+
 // Re-exportar utilidades útiles
 export { processSearchParams } from '../utils/search.utils';

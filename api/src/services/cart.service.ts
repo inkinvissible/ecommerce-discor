@@ -174,7 +174,7 @@ export async function getUserCart(userId: string, clientId: string): Promise<Car
             client.applyVat
         );
 
-        const subtotal = priceBreakdown.finalPrice * item.quantity;
+        const subtotal = priceBreakdown.discountedPrice * item.quantity;
 
         return {
             id: item.id,
@@ -208,6 +208,7 @@ export async function getUserCart(userId: string, clientId: string): Promise<Car
         summary: {
             totalItems,
             totalAmount: Math.round(totalAmount * 100) / 100,
+            totalAmountWithVat: totalAmount * 1.21,
             itemsCount
         }
     };
@@ -295,7 +296,7 @@ export async function getUserCart(userId: string, clientId: string): Promise<Car
 
         if (existingItem) {
             // Si existe, actualizar la cantidad
-            const newQuantity = existingItem.quantity + quantity;
+            const newQuantity =  quantity;
 
             await prisma.cartItem.update({
                 where: { id: existingItem.id },

@@ -11,6 +11,7 @@ export const ABBREVIATIONS_MAP = {
     'l/c': 'levanta cristal',
     'cerr': 'cerradura',
     'c/': 'con',
+    'maq': 'maquina',
     's/': 'sin',
     'c/cil': 'con cilindro',
     's/mot': 'sin motor',
