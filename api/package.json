@@ -7,7 +7,8 @@
     "dev:worker": "nodemon --exec ts-node src/workers/worker-manager.ts",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:generate": "npx prisma generate",
-    "sync:erp": "ts-node src/jobs/sync-erp.ts"
+    "sync:erp": "node dist/jobs/sync-erp.js",
+    "sync:erp:dev": "ts-node src/jobs/sync-erp.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
