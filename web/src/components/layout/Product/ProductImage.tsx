@@ -23,13 +23,6 @@ import {
     DialogTrigger,
     DialogTitle
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 // Interfaz de props para el componente principal
 interface ProductImageZoomProps {
@@ -38,55 +31,6 @@ interface ProductImageZoomProps {
     className?: string;
 }
 
-// Componente para los controles de Zoom (interno)
-const Controls = () => {
-    const { zoomIn, zoomOut, resetTransform } = useControls();
-    return (
-        <TooltipProvider>
-            <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            className="h-10 w-10 rounded-full p-2.5 shadow-lg"
-                            onClick={() => zoomIn()}
-                        >
-                            <ZoomIn className="h-5 w-5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                        <p>Acercar</p>
-                    </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            className="h-10 w-10 rounded-full p-2.5 shadow-lg"
-                            onClick={() => zoomOut()}
-                        >
-                            <ZoomOut className="h-5 w-5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                        <p>Alejar</p>
-                    </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            className="h-10 w-10 rounded-full p-2.5 shadow-lg"
-                            onClick={() => resetTransform()}
-                        >
-                            <RotateCcw className="h-5 w-5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                        <p>Restablecer</p>
-                    </TooltipContent>
-                </Tooltip>
-            </div>
-        </TooltipProvider>
-    );
-};
 
 // Componente principal ProductImageZoom
 const ProductImageZoom = ({ sku, alt }: ProductImageZoomProps) => {

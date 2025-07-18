@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, Loader2, Package, Tag, Building2, AlertCircle } from "lucide-react";
+import { Trash2, Plus, Minus, Loader2, Package, Tag, Building2 } from "lucide-react";
 import { CartItem } from "@/types/cart";
 import Image from 'next/image';
 import { formatPrice } from "@/utils/formatPrice";
