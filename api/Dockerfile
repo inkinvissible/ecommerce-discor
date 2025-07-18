@@ -8,7 +8,7 @@ FROM node:22.17-bookworm-slim AS builder
 WORKDIR /app
 
 # Instala OpenSSL para compatibilidad con Prisma y otras herramientas
-RUN apt-get update && apt-get install -y openssl
+RUN apt-get update && apt-get install -y openssl ca-certificates
 
 # Copia los archivos de definición de paquetes
 COPY package*.json ./
