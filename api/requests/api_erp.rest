@@ -1,0 +1,2 @@
+GET https://apidiscor.multisoft.ar/Stock?token=uEff5UF2jy5o5cDBo6BpJRPQ4
+Accept: application/json

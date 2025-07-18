@@ -1,0 +1,9 @@
+POST https://discor-ecommerce-bbe2033519e7.herokuapp.com/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "00318",
+  "password": "0000"
+}
+
+

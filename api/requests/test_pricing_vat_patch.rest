@@ -1,0 +1,7 @@
+PATCH http://localhost:4000/api/configuration/vat-setting
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YjdhZjExOC1kM2M3LTQ2YmUtYmE2OC1kNDBjNmY0ZTFlZjEiLCJjbGllbnRJZCI6ImNjYTM5MWJlLTE1ZTktNDJhYi1hOTAwLTUwMWUwNjM4ZjA5NiIsInVzZXJuYW1lIjoiMDAyODEiLCJpYXQiOjE3NTI0OTIwMzEsImV4cCI6MTc1MzA5NjgzMX0.MBeU4kbmbIj7jV_d4y7oLjGr_FEfnEBUUg1SrsMP3h0
+Content-Type: application/json
+
+{
+  "hasVat": false
+}

@@ -1,0 +1,23 @@
+POST https://apidiscor.multisoft.ar/NuevoPedido?token=uEff5UF2jy5o5cDBo6BpJRPQ4
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "uEff5UF2jy5o5cDBo6BpJRPQ4",
+  "Fecha": "2025-07-15",
+  "Hora": "08:15",
+  "idWeb": "PRUEBA - SITIO PROPIO",
+  "DescuentoGeneral": 37,
+  "ObservacionPedido": "",
+  "Items": [
+    {
+      "CODIGO": "752500",
+      "CANTIDAD": 2,
+      "PRECIOUNITARIO": 5000,
+      "DESCUENTO": 1,
+      "TOTALITEM": 10000,
+      "OBSERVACION": ""
+    }
+  ],
+  "Cliente": "00281"
+}

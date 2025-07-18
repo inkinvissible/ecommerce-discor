@@ -1,0 +1,8 @@
+POST http://localhost:4000/api/cart/items
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NGFjNDU2Yy03MzQ1LTRlNzEtOTRmYy0xY2U0MWEwNGNiZTIiLCJjbGllbnRJZCI6Ijc1MTk5MzJmLWQ2OTQtNGZlNS05MDVkLTUyZTQyODYzYjllMiIsInVzZXJuYW1lIjoiMDAzMTgiLCJpYXQiOjE3NTI4MzU2NDgsImV4cCI6MTc1MzQ0MDQ0OH0.MVtEQOE5ji3KmqEhGOAiGpmxlm3ETdyqNsZgBqbiRKM
+Content-Type: application/json
+
+{
+  "productId": "4fc23118-4110-4c01-8007-c73892d21241",
+  "quantity": 2
+}
