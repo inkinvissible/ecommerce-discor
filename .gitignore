@@ -41,3 +41,19 @@ coverage/
 # Otros
 npm-shrinkwrap.json
 package-lock.json
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+requests/
+node_modules/
+
+# Archivos de Build
+.next/
+dist/
+build/
+
+# Logs
+logs
+*.log
