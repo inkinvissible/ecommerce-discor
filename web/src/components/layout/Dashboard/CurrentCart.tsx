@@ -100,7 +100,7 @@ const CurrentCart: React.FC<CurrentCartProps> = ({ cart, loading, error }) => {
                                         {formatCurrency(item.subtotal)}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                        {formatCurrency(item.priceBreakdown.finalPrice)} c/u
+                                        {formatCurrency(item.priceBreakdown.discountedPrice)} c/u
                                     </p>
                                 </div>
                             </div>
@@ -109,9 +109,10 @@ const CurrentCart: React.FC<CurrentCartProps> = ({ cart, loading, error }) => {
                 </div>
                 <div className="border-t pt-4">
                     <div className="flex justify-between items-center font-semibold text-lg">
-                        <span>Total:</span>
+                        <span>Total sin IVA:</span>
                         <span>{formatCurrency(cart.summary.totalAmount)}</span>
                     </div>
+
                     <div className="text-sm text-gray-600 mt-1">
                         {cart.summary.totalItems} items en total
                     </div>

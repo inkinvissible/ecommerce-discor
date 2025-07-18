@@ -3,9 +3,10 @@ build:
   docker:
     # Apunta a la carpeta que contiene tu Dockerfile de producción.
     web: Dockerfile
+    worker: Dockerfile
   # (Opcional) Configuración de variables de entorno para el tiempo de construcción.
   # config:
-  #   RAILS_ENV: "production"
+
 
 # Define los comandos a ejecutar ANTES de que una nueva versión sea lanzada.
 # ¡Perfecto para migraciones de base de datos!
@@ -20,6 +21,6 @@ run:
   # El 'web dyno' principal que responderá a las peticiones HTTP.
   web: npm start
   # El comando de arriba puede ser el mismo que el CMD de tu Dockerfile de producción.
-
+  worker: npm run start:worker
   # (Opcional) El worker dyno para tu cron job de sincronización.
   # worker: node src/infrastructure/jobs/sync.job.js

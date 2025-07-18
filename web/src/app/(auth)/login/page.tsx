@@ -21,32 +21,34 @@ export default function LoginPage() {
         const result = await login(data);
 
         if (!result.success) {
-            setError(result.error);
+            const errorMessage = result.error ?? "Error al iniciar sesión. Por favor, intenta nuevamente.";
+            setError(errorMessage);
         }
     };
 
     return (
-        <div className="min-h-screen flex">
-            {/* Panel izquierdo - Formulario */}
-            <div className="w-1/2 flex flex-col justify-center px-12 lg:px-16 bg-gray-50">
+        <div className="min-h-screen flex flex-col lg:flex-row">
+            {/* Panel de formulario - Primero en móvil */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-8 md:px-12 lg:px-16 py-8 lg:py-0 bg-gray-50 order-1 lg:order-1">
                 <div className="max-w-md mx-auto w-full">
                     {/* Logo */}
-                    <div className="mb-8">
+                    <div className="mb-6 lg:mb-8 text-center lg:text-left">
                         <Image
                             src={"/images/logo-discor.png"}
                             alt={"Logo de DisCor: Cerrajería y Accesorios"}
-                            height={40}
-                            width={190}
+                            height={32}
+                            width={152}
+                            className="sm:h-10 sm:w-48 mx-auto lg:mx-0"
                         />
-                        <p className="text-gray-600 mt-2">Sistema E-commerce exclusivo clientes</p>
+                        <p className="text-gray-600 mt-2 text-sm sm:text-base">Sistema E-commerce exclusivo clientes</p>
                     </div>
 
                     {/* Título */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    <div className="mb-6 lg:mb-8 text-center lg:text-left">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                             Iniciar Sesión
                         </h1>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 text-sm sm:text-base">
                             Accede a tu panel de administración
                         </p>
                     </div>
@@ -62,10 +64,10 @@ export default function LoginPage() {
                     <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
 
                     {/* Enlaces de ayuda */}
-                    <div className="mt-8 text-center">
+                    <div className="mt-6 lg:mt-8 text-center lg:text-left">
                         <p className="text-gray-600 text-sm">
                             ¿Necesitas ayuda?{" "}
-                            <a href="#" className="text-primary hover:text-shadow-primary transition-all ease-in-out duration-300 font-semibold underline">
+                            <a href="https://wa.me/5493517638778" className="text-primary hover:text-shadow-primary transition-all ease-in-out duration-300 font-semibold underline">
                                 Soporte técnico
                             </a>
                         </p>
@@ -73,8 +75,8 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {/* Panel derecho - Imagen */}
-            <div className="w-1/2 relative">
+            {/* Panel de imagen - Oculto en móvil, visible en pantallas grandes */}
+            <div className="hidden lg:block lg:w-1/2 relative">
                 <Image
                     src="/images/login-image.jpg"
                     alt="Auto profesional"
@@ -85,9 +87,9 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/80"></div>
 
                 {/* Contenido superpuesto */}
-                <div className="absolute inset-0 flex flex-col justify-center px-8 lg:px-12 text-white">
+                <div className="absolute inset-0 flex flex-col justify-center px-8 xl:px-12 text-white">
                     <div className="max-w-lg">
-                        <h2 className="text-4xl font-bold mb-8 leading-tight">
+                        <h2 className="text-3xl xl:text-4xl font-bold mb-8 leading-tight">
                             4 simples pasos para que realices tu pedido
                         </h2>
 

@@ -1,5 +1,4 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { NotificationDropdown } from "@/components/layout/Header/NotificationDropdown";
 import { HelpDropdown } from "@/components/layout/Header/HelpDropdown";
 import { UserDropdown } from "@/components/layout/Header/UserDropdown";
 
@@ -15,7 +14,6 @@ export function Header() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <NotificationDropdown />
                     <HelpDropdown />
                     <UserDropdown />
                 </div>

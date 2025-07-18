@@ -3,6 +3,7 @@
     "dev": "nodemon",
     "build": "npx tsc",
     "start": "node dist/index.js",
+    "start:worker": "node dist/workers/worker-manager.js",
     "dev:worker": "nodemon --exec ts-node src/workers/worker-manager.ts",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:generate": "npx prisma generate",

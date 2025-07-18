@@ -34,10 +34,6 @@ export function UserDropdown() {
                     </DropdownMenuItem>
                 </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    <span>Cerrar sesión</span>
-                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

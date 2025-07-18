@@ -61,4 +61,5 @@ export interface OrderInfo {
     timeOfDay?: TimeOfDay;
     isUrgent: boolean;
     deliveryAddress?: string;
+    shippingNotes?: string;
 }

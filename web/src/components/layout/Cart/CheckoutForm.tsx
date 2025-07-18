@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { OrderType, TimeOfDay, OrderInfo } from '@/types/order';
 import { useProfile } from "@/hooks/useProfile";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Clock, Truck, Package, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
+import { MapPin, Clock, Truck, Package, Calendar as CalendarIcon, AlertCircle, FileText } from 'lucide-react';
 
 interface CheckoutFormProps {
     onSubmit: (orderInfo: OrderInfo) => void;
@@ -21,9 +22,54 @@ export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
     const [selectedDate, setSelectedDate] = useState<Date>();
     const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>();
     const [isUrgent, setIsUrgent] = useState(false);
+    const [shippingNotes, setShippingNotes] = useState('');
     const { profile, isLoading, isError } = useProfile();
     const defaultAddress = profile?.client.addresses.find(addr => addr.isDefaultShipping);
     const userAddress = defaultAddress?.street
+
+    const buildShippingMessage = () => {
+        const messages = [];
+
+        // Tipo de pedido
+        messages.push(`TIPO DE PEDIDO: ${orderType === 'PICKUP' ? 'Retirar en local' : 'Entrega a domicilio'}`);
+
+        // Dirección si es delivery
+        if (orderType === 'DELIVERY' && userAddress) {
+            messages.push(`DIRECCIÓN: ${userAddress}`);
+        }
+
+        // Urgencia
+        if (isUrgent) {
+            messages.push('PEDIDO URGENTE: Procesar lo antes posible');
+        } else {
+            // Fecha y hora si no es urgente
+            if (selectedDate) {
+                const formattedDate = selectedDate.toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                messages.push(`FECHA: ${formattedDate}`);
+            }
+
+            if (timeOfDay) {
+                const timeLabels = {
+                    morning: 'Mañana (9:00 - 11:00)',
+                    afternoon: 'Mediodía (11:00 - 14:00)',
+                    evening: 'Tarde (14:00 - 17:00)'
+                };
+                messages.push(`HORARIO: ${timeLabels[timeOfDay]}`);
+            }
+        }
+
+        // Notas adicionales
+        if (shippingNotes.trim()) {
+            messages.push(`NOTAS: ${shippingNotes.trim()}`);
+        }
+
+        return messages.join('\n');
+    };
 
     const handleSubmit = () => {
         const orderInfo: OrderInfo = {
@@ -31,7 +77,8 @@ export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
             date: !isUrgent ? selectedDate : undefined,
             timeOfDay: !isUrgent ? timeOfDay : undefined,
             isUrgent,
-            deliveryAddress: orderType === 'DELIVERY' ? userAddress : undefined
+            deliveryAddress: orderType === 'DELIVERY' ? userAddress : undefined,
+            shippingNotes: buildShippingMessage()
         };
 
         onSubmit(orderInfo);
@@ -237,6 +284,26 @@ export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
                         </div>
                     </div>
                 )}
+
+                <Separator className="my-6 bg-gray-200" />
+
+                {/* Campo de notas adicionales */}
+                <div className="space-y-4">
+                    <Label className="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span>Notas adicionales</span>
+                    </Label>
+                    <Textarea
+                        placeholder="Ingresa cualquier información adicional para tu pedido..."
+                        value={shippingNotes}
+                        onChange={(e) => setShippingNotes(e.target.value)}
+                        rows={4}
+                        className="resize-none border-gray-200 focus:border-primary focus:ring-primary"
+                    />
+                    <p className="text-sm text-gray-500">
+                        Ejemplo: Preferencias de horario, instrucciones especiales, etc.
+                    </p>
+                </div>
 
                 <div className="pt-6">
                     <Button

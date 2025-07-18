@@ -7,7 +7,6 @@ interface ProductsParams {
     categoryIds?: string;
     page?: number;
     limit?: number;
-
 }
 
 export const productService = {
@@ -31,7 +30,7 @@ export const productService = {
         const url = `/api/products${queryString ? `?${queryString}` : ''}`;
 
         try {
-            const response = await apiClient.get<ProductsResponse>(url);
+            const response: ProductsResponse = await apiClient.get(url);
             return response;
         } catch (error) {
             console.error('Error fetching products:', error);
@@ -42,8 +41,9 @@ export const productService = {
     // Obtener un producto por ID
     getProduct: async (id: string): Promise<Product> => {
         try {
-            const response = await apiClient.get<Product>(`/api/products/${id}`);
-            return response;
+            const product: Product = await apiClient.get(`/api/products/${id}`);
+            return product;
+
         } catch (error) {
             console.error('Error fetching product:', error);
             throw error;
