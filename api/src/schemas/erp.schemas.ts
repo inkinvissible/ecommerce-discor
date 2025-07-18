@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const erpClientSchema = z.object({
     // --- Campos Indispensables (los mantenemos requeridos) ---
-    C2_CODI: z.string().min(1, 'El código de cliente no puede estar vacío'),
+    C2_CODI: z.string().min(1, 'El código de cliente no puede estar vacíos'),
     C2_DESC: z.string().min(1, 'La razón social no puede estar vacía'),
 
     // --- CUIT (AHORA MÁS ROBUSTO) ---
