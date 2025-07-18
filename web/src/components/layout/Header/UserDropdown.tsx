@@ -1,4 +1,4 @@
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,

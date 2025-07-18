@@ -10,7 +10,6 @@ import Pagination from '@/components/ui/pagination';
 import { useProductStore } from '@/store/useProductStore';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { useCart } from '@/hooks/useCart';
 
 const ProductsPage: React.FC = () => {
     const {
@@ -23,7 +22,6 @@ const ProductsPage: React.FC = () => {
 
     // Hooks para datos
     const { categories, isLoading: categoriesLoading, error: categoriesError, refetch: refetchCategories } = useCategories();
-    const { getTotalItems } = useCart(); // Hook del carrito para estado global
 
     const {
         products,
