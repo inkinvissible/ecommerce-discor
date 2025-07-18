@@ -5,12 +5,8 @@ import Image from "next/image";
 import {
     TransformWrapper,
     TransformComponent,
-    useControls,
 } from "react-zoom-pan-pinch";
 import {
-    ZoomIn,
-    ZoomOut,
-    RotateCcw,
     Maximize2,
     Loader2,
     Package,
