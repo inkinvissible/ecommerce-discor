@@ -31,7 +31,7 @@ const logger = pino({
   },
 });
 
-// Logger específico para diferentes módulos
+// Logger específico para los diferentes módulos
 export const createModuleLogger = (module: string) => {
   return logger.child({ module });
 };
