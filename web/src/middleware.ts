@@ -44,14 +44,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: [
-        /*
-         * Coincidir con todas las rutas excepto:
-         * 1. /api (rutas API)
-         * 2. /_next/static (archivos estáticos)
-         * 3. /_next/image (optimización de imágenes)
-         * 4. /favicon.ico (favicon)
-         */
-        '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    ],
+    matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp)).*)'],
 }

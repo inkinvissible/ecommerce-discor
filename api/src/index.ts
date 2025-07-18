@@ -12,12 +12,15 @@ const cors = require('cors');
 const port = process.env.PORT || 4000;
 app.use(express.json());
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 console.log('=============== API STARTUP ===============');
 console.log(`[ENV CHECK] DATABASE_URL: ${process.env.DATABASE_URL}`);
