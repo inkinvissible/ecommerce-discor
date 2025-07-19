@@ -1,4 +1,4 @@
-import { HelpCircle, MessageSquare, FileText, Phone, Mail } from "lucide-react";
+import { HelpCircle, FileText, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -8,6 +8,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 export function HelpDropdown() {
     return (
@@ -20,22 +21,21 @@ export function HelpDropdown() {
             <DropdownMenuContent className="w-56" align="end">
                 <DropdownMenuLabel>Centro de Ayuda</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    <span>Chat en vivo</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    <FileText className="w-4 h-4 mr-2" />
-                    <span>Documentación</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    <Phone className="w-4 h-4 mr-2" />
-                    <span>Contacto telefónico</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    <Mail className="w-4 h-4 mr-2" />
-                    <span>Enviar email</span>
-                </DropdownMenuItem>
+
+
+                <Link href={"/docs"}>
+                        <DropdownMenuItem>
+                        <FileText className="w-4 h-4 mr-2" />
+                        <span>Documentación</span>
+                        </DropdownMenuItem>
+                </Link>
+
+                <Link href={"https://wa.me/5493512050889"} target="_blank">
+                    <DropdownMenuItem>
+                        <Phone className="w-4 h-4 mr-2" />
+                        <span>Contacto telefónico</span>
+                    </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <span className="text-sm text-gray-500">Versión 1.0.0</span>

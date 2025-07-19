@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
     return (
         <div className="container mx-auto py-6 px-4 space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <h1 className="text-2xl font-bold">Panel de control</h1>
                 <Button
                     onClick={handleRefreshAll}
                     variant="outline"

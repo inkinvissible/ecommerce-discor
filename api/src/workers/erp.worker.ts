@@ -26,12 +26,6 @@ async function processSingleJob(job: Job<SyncOrderToErpJobPayload>) {
         const erpPayload = {
             token: process.env.API_TOKEN,
             idWeb: "PRUEBA - SITIO PROPIO",
-            Fecha: new Date(order.createdAt).toLocaleDateString('es-ES'),
-            Hora: new Date(order.createdAt).toLocaleTimeString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            }),
             DescuentoGeneral: order.client.discountPercentage.toString(),
             ObservacionPedido: order.shippingNotes || "",
             CondicionVenta: "CONTADO",

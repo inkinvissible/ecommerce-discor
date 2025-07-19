@@ -9,7 +9,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarHeader,
-    SidebarFooter,
+    SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import {
     Home,
@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import {useEffect} from "react";
+import {usePathname} from "next/navigation";
 
 const menuItems = [
     {
@@ -56,6 +58,24 @@ const menuItems = [
 ];
 
 export const AppSidebar = () => {
+    const { setOpenMobile, isMobile} = useSidebar();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        if (isMobile){
+            // Si estamos en una vista móvil y el usuario navega a una nueva página, cerramos el sidebar
+            setOpenMobile(false);
+        }
+
+    }, [pathname, isMobile, setOpenMobile]);
+
+    const handleMenuClick = () => {
+        // Si estamos en una vista móvil, cerramos el sidebar al hacer clic en un elemento del menú
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    }
+
     const handleLogout = () => {
         // Aquí puedes implementar la lógica de cierre de sesión
         // Por ejemplo, eliminar el token del localStorage y redirigir al usuario
@@ -78,7 +98,7 @@ export const AppSidebar = () => {
                             {menuItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild>
-                                        <Link href={item.url} className="flex items-center space-x-3">
+                                        <Link href={item.url} className="flex items-center space-x-3" onClick={handleMenuClick}>
                                             <item.icon className="w-5 h-5" />
                                             <span>{item.title}</span>
                                         </Link>

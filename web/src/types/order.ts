@@ -63,3 +63,31 @@ export interface OrderInfo {
     deliveryAddress?: string;
     shippingNotes?: string;
 }
+
+// Agrega estos tipos a tu archivo src/types/order.ts
+export interface CreateOrderRequest {
+    shippingMethod: OrderType;
+    shippingNotes: string;
+    shippingAddressId?: string;
+}
+
+export interface CreateOrderResponse {
+    message: string;
+    order: {
+        id: string;
+        userId: string;
+        clientId: string;
+        status: string;
+        subtotal: string;
+        discountAmount: string;
+        shippingCost: string | null;
+        isFreeShipping: boolean;
+        totalAmount: string;
+        currency: string;
+        shippingAddressId: string | null;
+        shippingNotes: string | null;
+        shippingMethod: OrderType;
+        createdAt: string;
+        updatedAt: string;
+    };
+}
