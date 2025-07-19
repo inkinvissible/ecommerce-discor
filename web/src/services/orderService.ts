@@ -1,5 +1,5 @@
-import { apiClient } from '@/lib/api/client';
-import { OrdersParams, OrdersResponse } from '@/types/order';
+import {apiClient} from '@/lib/api/client';
+import {CreateOrderRequest, CreateOrderResponse, OrdersParams, OrdersResponse} from '@/types/order';
 
 export const ordersService = {
     getOrders: async (params: OrdersParams = {}): Promise<OrdersResponse> => {
@@ -17,5 +17,18 @@ export const ordersService = {
             throw new Error('Error al obtener las órdenes');
 
         }
+    },
+    createOrder: async (orderData: CreateOrderRequest): Promise<CreateOrderResponse> => {
+        try {
+            const response = await apiClient.post<CreateOrderResponse>(
+                '/api/orders',
+                orderData
+            );
+            return response as unknown as CreateOrderResponse;
+        } catch (e) {
+            console.log(e);
+            throw new Error('Error al crear la orden');
+        }
     }
+
 };

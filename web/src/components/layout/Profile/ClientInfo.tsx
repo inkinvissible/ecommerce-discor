@@ -94,11 +94,11 @@ export const ClientInfo = ({ client }: ClientInfoProps) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <span className="font-medium">Zona de Envío:</span>
-                                <p className="text-sm text-gray-600">{client.shippingZone.name}</p>
+                                <p className="text-sm text-gray-600">{client.shippingZone?.name}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="font-medium">Ganancia aplicada:</span>
-                                <p className="text-sm text-gray-600">{client.pricingConfigs.markupPercentage}%</p>
+                                <p className="text-sm text-gray-600">{client.pricingConfigs?.markupPercentage}%</p>
                                 <Tooltip>
                                     <TooltipTrigger>
                                         <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />

@@ -144,7 +144,7 @@ const ProductCard: React.FC<ProductCardProps> = ({product}) => {
                                             <TooltipTrigger asChild>
                                                 <div
                                                     className="text-2xl font-bold text-gray-900 flex items-center gap-2 cursor-help">
-                                                    ${formatPrice(product.priceBreakdown.finalPrice)}
+                                                    <span className="text-primary text-sm">Sugerido:</span> ${formatPrice(product.priceBreakdown.finalPrice)}
                                                     <Info
                                                         className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors"/>
                                                 </div>

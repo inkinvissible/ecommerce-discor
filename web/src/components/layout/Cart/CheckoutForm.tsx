@@ -225,7 +225,11 @@ export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
                                     mode="single"
                                     selected={selectedDate}
                                     onSelect={setSelectedDate}
-                                    disabled={(date) => date < new Date()}
+                                    disabled={(date: Date): boolean =>{
+                                        const today = new Date();
+                                        today.setHours(0,0,0,0);
+                                        return date < today || date.getDay() === 0 || date.getDay() === 6; // Deshabilitar domingos y sábados
+                                    }}
                                     className="rounded-md border-0 bg-white shadow-sm"
                                 />
                             </div>
