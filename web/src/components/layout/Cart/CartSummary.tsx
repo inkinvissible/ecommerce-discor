@@ -10,6 +10,7 @@ import { OrderInfo } from "@/types/order";
 import { ordersService } from "@/services/orderService";
 import { useProfile } from "@/hooks/useProfile";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { CreateOrderRequest } from "@/types/order";
 
 interface CartSummaryProps {
     summary: Cart['summary'];
