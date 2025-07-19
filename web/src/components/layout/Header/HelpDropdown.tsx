@@ -1,4 +1,4 @@
-import { HelpCircle, FileText, Phone, Mail } from "lucide-react";
+import { HelpCircle, FileText, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
